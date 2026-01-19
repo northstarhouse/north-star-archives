@@ -1,4 +1,35 @@
-const { useState, useEffect, useMemo, useCallback } = React;
+const { useState, useEffect, useMemo, useCallback, useRef } = React;
+
+// =====================================================================
+// LOCAL CACHE CONFIG
+// =====================================================================
+
+const CACHE_KEY = 'nsh-archives-cache-v1';
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+const readCache = () => {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.objects)) return null;
+    return parsed;
+  } catch (error) {
+    console.warn('Failed to read cache:', error);
+    return null;
+  }
+};
+
+const writeCache = (objects) => {
+  try {
+    localStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({ objects, updatedAt: Date.now() })
+    );
+  } catch (error) {
+    console.warn('Failed to write cache:', error);
+  }
+};
 
 // ============================================================================
 // GOOGLE SHEETS CONFIGURATION
@@ -107,6 +138,16 @@ const SAMPLE_OBJECTS = [
 const SheetsAPI = {
   isConfigured: () => GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.length > 0,
 
+  postJson: async (payload) => {
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error('Request failed');
+    return response.json();
+  },
+
   // Fetch all objects from Google Sheets
   fetchAll: async () => {
     if (!SheetsAPI.isConfigured()) {
@@ -133,14 +174,8 @@ const SheetsAPI = {
     }
 
     try {
-      const response = await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors', // Required for Google Apps Script
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create', object })
-      });
-      // With no-cors, we can't read the response, so return the object with a timestamp ID
-      return { ...object, id: Date.now().toString() };
+      const data = await SheetsAPI.postJson({ action: 'create', object });
+      return data.result || { ...object, id: Date.now().toString() };
     } catch (error) {
       console.error('Error creating in Google Sheets:', error);
       return { ...object, id: Date.now().toString() };
@@ -155,12 +190,7 @@ const SheetsAPI = {
     }
 
     try {
-      const response = await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update', object })
-      });
+      await SheetsAPI.postJson({ action: 'update', object });
       return object;
     } catch (error) {
       console.error('Error updating in Google Sheets:', error);
@@ -176,17 +206,30 @@ const SheetsAPI = {
     }
 
     try {
-      await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete', id })
-      });
+      await SheetsAPI.postJson({ action: 'delete', id });
       return true;
     } catch (error) {
       console.error('Error deleting from Google Sheets:', error);
       return false;
     }
+  },
+
+  // Upload an image file to Google Drive via Apps Script
+  uploadImage: async ({ filename, mimeType, data }) => {
+    if (!SheetsAPI.isConfigured()) {
+      throw new Error('Google Sheets not configured');
+    }
+
+    const payload = {
+      action: 'uploadImage',
+      filename,
+      mimeType,
+      data
+    };
+
+    const response = await SheetsAPI.postJson(payload);
+    if (!response.success) throw new Error(response.error || 'Upload failed');
+    return response.result;
   }
 };
 
@@ -323,6 +366,7 @@ const ImageGallery = ({ images, title }) => {
             src={currentImage.url}
             alt={currentImage.caption || title}
             className="w-full h-full object-cover"
+            decoding="async"
           />
           <button
             className="absolute top-4 right-4 bg-white/80 hover:bg-white p-2 rounded-full transition-colors"
@@ -366,7 +410,13 @@ const ImageGallery = ({ images, title }) => {
                 idx === currentIndex ? 'border-gold ring-2 ring-gold/30' : 'border-transparent opacity-70 hover:opacity-100'
               }`}
             >
-              <img src={img.url} alt="" className="w-full h-full object-cover" />
+              <img
+                src={img.url}
+                alt=""
+                className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
+              />
             </button>
           ))}
         </div>
@@ -388,6 +438,7 @@ const ImageGallery = ({ images, title }) => {
             alt={currentImage.caption || title}
             className="max-w-full max-h-full object-contain"
             onClick={(e) => e.stopPropagation()}
+            decoding="async"
           />
           {currentImage.caption && (
             <p className="absolute bottom-4 left-4 right-4 text-center text-white text-sm">
@@ -497,6 +548,8 @@ const ObjectCard = ({ object, onClick }) => {
             src={primaryImage.url}
             alt={object.title}
             className="w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-stone-400">
@@ -628,15 +681,47 @@ const TagInput = ({ tags, onChange, placeholder = "Add tag..." }) => {
 // ============================================================================
 
 const ImageInput = ({ images, onChange }) => {
-  const [url, setUrl] = useState('');
   const [caption, setCaption] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef(null);
 
-  const addImage = () => {
-    if (url.trim()) {
+  const readAsDataUrl = (file) => (
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    })
+  );
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadError('');
+
+    try {
+      const dataUrl = await readAsDataUrl(file);
+      const base64 = dataUrl.split(',')[1] || '';
+      if (!base64) throw new Error('Invalid image data');
+
+      const result = await SheetsAPI.uploadImage({
+        filename: file.name,
+        mimeType: file.type,
+        data: base64
+      });
+
       const isPrimary = images.length === 0;
-      onChange([...images, { url: url.trim(), caption: caption.trim(), isPrimary }]);
-      setUrl('');
+      onChange([...images, { url: result.url, caption: caption.trim(), isPrimary }]);
       setCaption('');
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      setUploadError('Upload failed. Please try again.');
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -679,26 +764,31 @@ const ImageInput = ({ images, onChange }) => {
       ))}
       <div className="space-y-2">
         <input
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="Image URL"
-          className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
-        />
-        <input
           type="text"
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
           placeholder="Caption (optional)"
           className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
         />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className="hidden"
+        />
         <button
           type="button"
-          onClick={addImage}
-          className="flex items-center gap-2 px-4 py-2 bg-stone-100 hover:bg-stone-200 rounded-lg transition-colors text-sm"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          className="flex items-center gap-2 px-4 py-2 bg-stone-100 hover:bg-stone-200 disabled:bg-stone-200 rounded-lg transition-colors text-sm"
         >
-          <IconPlus size={16} /> Add Image
+          {isUploading ? <IconLoader size={16} /> : <IconPlus size={16} />}
+          {isUploading ? 'Uploading...' : 'Add Image'}
         </button>
+        {uploadError && (
+          <p className="text-xs text-red-600">{uploadError}</p>
+        )}
       </div>
     </div>
   );
@@ -1246,16 +1336,33 @@ const ArchiveApp = () => {
     loadData();
   }, []);
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = async ({ useCache = true } = {}) => {
+    const cached = useCache ? readCache() : null;
+    const isCacheFresh = cached && (Date.now() - cached.updatedAt) < CACHE_TTL_MS;
+
+    if (cached?.objects?.length) {
+      setObjects(cached.objects);
+      setIsConnected(SheetsAPI.isConfigured());
+      setIsLoading(false);
+    } else {
+      setIsLoading(true);
+    }
+
     try {
+      if (isCacheFresh) {
+        // Still refresh in the background for latest changes.
+      }
       const data = await SheetsAPI.fetchAll();
       setObjects(data);
       setIsConnected(SheetsAPI.isConfigured());
+      writeCache(data);
     } catch (error) {
       console.error('Failed to load data:', error);
-      setObjects(SAMPLE_OBJECTS);
+      if (!cached?.objects?.length) {
+        setObjects(SAMPLE_OBJECTS);
+      }
     }
+
     setIsLoading(false);
   };
 
@@ -1352,7 +1459,7 @@ const ArchiveApp = () => {
             onFilterChange={setFilters}
             onObjectClick={handleObjectClick}
             onAddNew={handleAddNew}
-            onRefresh={loadData}
+            onRefresh={() => loadData({ useCache: false })}
             isLoading={isLoading}
             isConnected={isConnected}
           />

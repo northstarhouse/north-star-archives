@@ -2,7 +2,7 @@
  * Google Apps Script for North Star House Archives
  *
  * SETUP INSTRUCTIONS:
- * 1. Create a new Google Sheet
+ * 1. Create a new Google Sheet (or use an existing one)
  * 2. Go to Extensions > Apps Script
  * 3. Delete any existing code and paste this entire file
  * 4. Click "Deploy" > "New deployment"
@@ -13,6 +13,10 @@
  * 9. Copy the Web App URL
  * 10. Paste the URL into GOOGLE_SCRIPT_URL in src/app.jsx
  *
+ * OPTIONAL:
+ * - If you want to target a specific spreadsheet (not the bound sheet),
+ *   set SHEET_ID below to the Google Sheet ID.
+ *
  * SHEET STRUCTURE:
  * The script will automatically create the header row on first use.
  * Columns: id, title, aboutText, images, from, designer, maker, makerRole,
@@ -20,7 +24,9 @@
  *          collection, objectType, objectNumber, createdAt, updatedAt
  */
 
+const SHEET_ID = '1qO5ZmBWJb0DqPRN_S2h7-7W9MhLdFg7ZGXluwvFWDYk';
 const SHEET_NAME = 'Archives';
+const IMAGE_FOLDER_NAME = 'North Star Archives Images';
 
 // Column headers matching the object schema
 const HEADERS = [
@@ -47,7 +53,9 @@ const HEADERS = [
  * Get or create the Archives sheet
  */
 function getSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SHEET_ID
+    ? SpreadsheetApp.openById(SHEET_ID)
+    : SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(SHEET_NAME);
 
   if (!sheet) {
@@ -59,6 +67,17 @@ function getSheet() {
   }
 
   return sheet;
+}
+
+/**
+ * Get or create the image folder in Drive
+ */
+function getImageFolder() {
+  const folders = DriveApp.getFoldersByName(IMAGE_FOLDER_NAME);
+  if (folders.hasNext()) {
+    return folders.next();
+  }
+  return DriveApp.createFolder(IMAGE_FOLDER_NAME);
 }
 
 /**
@@ -105,6 +124,9 @@ function doPost(e) {
         break;
       case 'delete':
         result = deleteObject(data.id);
+        break;
+      case 'uploadImage':
+        result = uploadImage(data);
         break;
       default:
         return ContentService
@@ -258,6 +280,30 @@ function deleteObject(id) {
   }
 
   return { deleted: false, id: id, error: 'Not found' };
+}
+
+/**
+ * Upload an image to Drive and return its public URL
+ */
+function uploadImage(data) {
+  if (!data || !data.data) {
+    throw new Error('Missing image data');
+  }
+
+  const bytes = Utilities.base64Decode(data.data);
+  const mimeType = data.mimeType || 'application/octet-stream';
+  const filename = data.filename || 'image';
+  const blob = Utilities.newBlob(bytes, mimeType, filename);
+  const folder = getImageFolder();
+  const file = folder.createFile(blob);
+
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+  return {
+    id: file.getId(),
+    url: `https://drive.google.com/uc?export=view&id=${file.getId()}`,
+    name: file.getName()
+  };
 }
 
 /**
