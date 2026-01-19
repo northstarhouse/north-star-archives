@@ -1,0 +1,21 @@
+{
+  "name": "north-star-archives",
+  "version": "1.0.0",
+  "description": "Archival object entry system for the North Star House - a Julia Morgan historic building",
+  "main": "index.js",
+  "scripts": {
+    "build": "esbuild src/app.jsx --outfile=assets/app.js --minify --format=iife --jsx-factory=React.createElement --jsx-fragment=React.Fragment --target=es2017",
+    "watch": "esbuild src/app.jsx --outfile=assets/app.js --format=iife --jsx-factory=React.createElement --jsx-fragment=React.Fragment --target=es2017 --watch"
+  },
+  "keywords": [
+    "archives",
+    "museum",
+    "julia-morgan",
+    "north-star-house"
+  ],
+  "author": "North Star House",
+  "license": "ISC",
+  "devDependencies": {
+    "esbuild": "^0.27.2"
+  }
+}
