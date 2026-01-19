@@ -26,6 +26,7 @@
 
 const SHEET_ID = '1qO5ZmBWJb0DqPRN_S2h7-7W9MhLdFg7ZGXluwvFWDYk';
 const SHEET_NAME = 'Archives';
+const IMAGE_FOLDER_ID = '1qcuRXPEICe9ZZNi4cWkcTNJAAL9cCxGz';
 const IMAGE_FOLDER_NAME = 'North Star Archives Images';
 
 // Column headers matching the object schema
@@ -73,6 +74,9 @@ function getSheet() {
  * Get or create the image folder in Drive
  */
 function getImageFolder() {
+  if (IMAGE_FOLDER_ID) {
+    return DriveApp.getFolderById(IMAGE_FOLDER_ID);
+  }
   const folders = DriveApp.getFoldersByName(IMAGE_FOLDER_NAME);
   if (folders.hasNext()) {
     return folders.next();
