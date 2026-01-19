@@ -25,6 +25,7 @@
  */
 
 const SHEET_ID = '1qO5ZmBWJb0DqPRN_S2h7-7W9MhLdFg7ZGXluwvFWDYk';
+const USE_BOUND_SPREADSHEET = true;
 const SHEET_NAME = 'Archives';
 const IMAGE_FOLDER_ID = '1qcuRXPEICe9ZZNi4cWkcTNJAAL9cCxGz';
 const IMAGE_FOLDER_NAME = 'North Star Archives Images';
@@ -56,15 +57,16 @@ const HEADERS = [
 function getSheet() {
   let ss = null;
 
-  if (SHEET_ID) {
+  if (USE_BOUND_SPREADSHEET) {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  } else if (SHEET_ID) {
     try {
       ss = SpreadsheetApp.openById(SHEET_ID);
     } catch (error) {
       Logger.log('openById failed, falling back to active spreadsheet: ' + error);
+      ss = SpreadsheetApp.getActiveSpreadsheet();
     }
-  }
-
-  if (!ss) {
+  } else {
     ss = SpreadsheetApp.getActiveSpreadsheet();
   }
   let sheet = ss.getSheetByName(SHEET_NAME);
