@@ -11,7 +11,7 @@ const { useState, useEffect, useMemo, useCallback } = React;
 // 4. Deploy as Web App (Execute as: Me, Who has access: Anyone)
 // 5. Copy the Web App URL and paste it below
 
-const GOOGLE_SCRIPT_URL = ''; // Paste your deployed Google Apps Script URL here
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwAGcXEtvH2joUHb0k1UxWSs8MYRqpUE-fn8wERcPxEQ9rK8hVGWcKnP7lpoWl7nNzM2A/exec';
 
 // ============================================================================
 // DROPDOWN OPTIONS
