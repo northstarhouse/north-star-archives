@@ -1,10 +1,10 @@
-const { useState, useEffect, useMemo } = React;
+const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
 // =====================================================================
 // LOCAL CACHE CONFIG
 // =====================================================================
 
-const CACHE_KEY = 'nsh-strategy-cache-v1';
+const CACHE_KEY = 'nsh-archives-cache-v1';
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 const readCache = () => {
@@ -35,6 +35,13 @@ const writeCache = (objects) => {
 // GOOGLE SHEETS CONFIGURATION
 // ============================================================================
 
+// Instructions to set up Google Sheets integration:
+// 1. Create a new Google Sheet
+// 2. Go to Extensions > Apps Script
+// 3. Paste the code from google-apps-script.js (included in this repo)
+// 4. Deploy as Web App (Execute as: Me, Who has access: Anyone)
+// 5. Copy the Web App URL and paste it below
+
 const USE_SHEETS = true;
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwAGcXEtvH2joUHb0k1UxWSs8MYRqpUE-fn8wERcPxEQ9rK8hVGWcKnP7lpoWl7nNzM2A/exec';
 const DRIVE_SCRIPT_URL = GOOGLE_SCRIPT_URL;
@@ -43,94 +50,86 @@ const DRIVE_SCRIPT_URL = GOOGLE_SCRIPT_URL;
 // DROPDOWN OPTIONS
 // ============================================================================
 
-const PILLARS = [
-  'Program Impact',
-  'Community Partnerships',
-  'Operations and Infrastructure',
-  'Financial Sustainability',
-  'Board and Leadership'
+const OBJECT_TYPES = [
+  'Architectural Element',
+  'Fixture',
+  'Document',
+  'Photograph',
+  'Furniture',
+  'Decorative Art',
+  'Building Material',
+  'Tool/Equipment',
+  'Textile',
+  'Artwork'
 ];
 
-const STATUSES = [
-  'Not started',
-  'On track',
-  'At risk',
-  'Behind',
-  'Complete'
+const COLLECTIONS = [
+  'Original Fixtures',
+  'Construction Documents',
+  'Historic Photographs',
+  'Restored Elements',
+  'Building Materials',
+  'Furnishings',
+  'Donor Contributions',
+  'Morgan Archives',
+  'Arts & Crafts Collection'
 ];
 
-const REVIEW_STATUSES = [
-  'Pending',
-  'Reviewed',
-  'Needs info'
+const MAKER_ROLES = [
+  'Architect',
+  'Designer',
+  'Builder',
+  'Craftsman',
+  'Artist',
+  'Collaborator',
+  'Fabricator',
+  'Photographer',
+  'Artisan',
+  'Contractor'
 ];
 
 // ============================================================================
-// FALLBACK SAMPLE DATA
+// FALLBACK SAMPLE DATA (used when Google Sheets is not configured)
 // ============================================================================
 
-const SAMPLE_INITIATIVES = [
+const SAMPLE_OBJECTS = [
   {
     id: '1',
-    title: 'Launch community listening series',
-    pillar: 'Community Partnerships',
-    description: 'Host quarterly listening sessions to guide program priorities and gather feedback.',
-    owner: 'Community Outreach Lead',
-    coChampions: 'Program Director, Board Liaison',
-    status: 'On track',
-    progress: 60,
-    targetDate: '2026-03-31',
-    successMetrics: '4 sessions held, 120 participants, report delivered to board',
-    notes: 'Align session topics with strategic planning themes.',
-    lastUpdateAt: '2026-01-12T18:30:00.000Z',
-    updates: [
-      {
-        id: 'up-1',
-        date: '2026-01-12T18:30:00.000Z',
-        author: 'Community Outreach Lead',
-        summary: 'Secured first three locations',
-        details: 'Libraries and partner agencies confirmed for January and February sessions.',
-        blockers: 'Waiting on translation support budget confirmation.',
-        nextSteps: 'Finalize outreach materials and RSVP form.',
-        progress: 60,
-        links: 'https://example.com/agenda',
-        reviewStatus: 'Pending',
-        reviewNotes: ''
-      }
+    title: 'Original Redwood Ceiling Beam',
+    aboutText: 'This magnificent old-growth redwood beam is one of the original structural elements from the 1905 construction of the North Star House.',
+    images: [
+      { url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800', caption: 'Full beam view showing grain pattern', isPrimary: true }
     ],
-    createdAt: '2025-11-15T12:00:00.000Z',
-    updatedAt: '2026-01-12T18:30:00.000Z'
+    from: 'Original Construction',
+    designer: 'Julia Morgan',
+    maker: 'Pacific Lumber Company',
+    makerRole: 'Fabricator',
+    portfolioTitle: 'North Star House - Structural Elements',
+    mediumMaterials: 'Old-growth Redwood, Wrought Iron hardware',
+    measurements: '20\' 6" L x 12" W x 14" H',
+    keywords: ['structural', 'original', 'redwood', '1900s', 'Arts & Crafts'],
+    collection: 'Building Materials',
+    objectType: 'Architectural Element',
+    objectNumber: 'NSH.1905.001'
   },
   {
     id: '2',
-    title: 'Build leadership succession pipeline',
-    pillar: 'Board and Leadership',
-    description: 'Create leadership development plan and identify emerging leaders for key roles.',
-    owner: 'Executive Director',
-    coChampions: 'Board Chair, HR Committee',
-    status: 'At risk',
-    progress: 35,
-    targetDate: '2026-09-30',
-    successMetrics: 'Pipeline matrix completed, two leaders in shadow roles',
-    notes: 'Need agreement on competencies and mentorship structure.',
-    lastUpdateAt: '2025-12-18T17:05:00.000Z',
-    updates: [
-      {
-        id: 'up-2',
-        date: '2025-12-18T17:05:00.000Z',
-        author: 'Executive Director',
-        summary: 'Drafted role competency framework',
-        details: 'Outlined core competencies for leadership roles; awaiting committee review.',
-        blockers: 'Committee schedule conflict in January.',
-        nextSteps: 'Hold workshop to finalize framework.',
-        progress: 35,
-        links: '',
-        reviewStatus: 'Needs info',
-        reviewNotes: 'Please add timeline impact for delayed workshop.'
-      }
+    title: 'Hammered Copper Lantern',
+    aboutText: 'A stunning example of Arts and Crafts metalwork, this hammered copper lantern was designed by Julia Morgan specifically for the North Star House entry.',
+    images: [
+      { url: 'https://images.unsplash.com/photo-1524484485831-a92ffc0de03f?w=800', caption: 'Lantern illuminated at dusk', isPrimary: true }
     ],
-    createdAt: '2025-10-01T09:00:00.000Z',
-    updatedAt: '2025-12-18T17:05:00.000Z'
+    from: 'Original Construction',
+    designer: 'Julia Morgan',
+    maker: 'Dirk van Erp Studio (attributed)',
+    makerRole: 'Artisan',
+    portfolioTitle: 'North Star House - Lighting Fixtures',
+    mediumMaterials: 'Hammered Copper, Amber Art Glass, Brass fittings',
+    measurements: '24" H x 14" Diameter',
+    keywords: ['lighting', 'Arts & Crafts', 'handcrafted', 'copper'],
+    collection: 'Original Fixtures',
+    objectType: 'Fixture',
+    objectNumber: 'NSH.1905.015'
   }
 ];
 
@@ -151,6 +150,7 @@ const SheetsAPI = {
     return response.json();
   },
 
+  // Fetch all objects from Google Sheets
   fetchAll: async () => {
     if (!USE_SHEETS) {
       const cached = readCache();
@@ -158,7 +158,7 @@ const SheetsAPI = {
     }
     if (!SheetsAPI.isConfigured()) {
       console.log('Google Sheets not configured, using sample data');
-      return SAMPLE_INITIATIVES;
+      return SAMPLE_OBJECTS;
     }
 
     try {
@@ -168,10 +168,11 @@ const SheetsAPI = {
       return data.objects || [];
     } catch (error) {
       console.error('Error fetching from Google Sheets:', error);
-      return SAMPLE_INITIATIVES;
+      return SAMPLE_OBJECTS;
     }
   },
 
+  // Save a new object to Google Sheets
   create: async (object) => {
     if (!SheetsAPI.isConfigured()) {
       console.log('Google Sheets not configured, saving locally only');
@@ -187,6 +188,7 @@ const SheetsAPI = {
     }
   },
 
+  // Update an existing object in Google Sheets
   update: async (object) => {
     if (!SheetsAPI.isConfigured()) {
       console.log('Google Sheets not configured, saving locally only');
@@ -197,11 +199,12 @@ const SheetsAPI = {
       await SheetsAPI.postJson(GOOGLE_SCRIPT_URL, { action: 'update', object });
       return object;
     } catch (error) {
-      console.error('Error updating from Google Sheets:', error);
+      console.error('Error updating in Google Sheets:', error);
       return object;
     }
   },
 
+  // Delete an object from Google Sheets
   delete: async (id) => {
     if (!SheetsAPI.isConfigured()) {
       console.log('Google Sheets not configured');
@@ -217,7 +220,8 @@ const SheetsAPI = {
     }
   },
 
-  uploadFile: async ({ filename, mimeType, data }) => {
+  // Upload an image file to Google Drive via Apps Script
+  uploadImage: async ({ filename, mimeType, data }) => {
     if (!DRIVE_SCRIPT_URL) {
       throw new Error('Drive upload not configured');
     }
@@ -236,737 +240,560 @@ const SheetsAPI = {
 };
 
 // ============================================================================
-// HELPERS
+// ICON COMPONENTS
 // ============================================================================
 
-const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2, 6)}`;
-
-const formatDate = (value) => {
-  if (!value) return 'N/A';
-  try {
-    return new Date(value).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  } catch (error) {
-    return value;
-  }
-};
-
-const normalizeInitiative = (item) => ({
-  ...item,
-  progress: Number(item.progress) || 0,
-  updates: Array.isArray(item.updates) ? item.updates : []
-});
-
-const sortUpdates = (updates) =>
-  updates.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
-
-const statusClass = (status) => {
-  switch (status) {
-    case 'On track':
-      return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-    case 'At risk':
-      return 'bg-amber-100 text-amber-700 border-amber-200';
-    case 'Behind':
-      return 'bg-rose-100 text-rose-700 border-rose-200';
-    case 'Complete':
-      return 'bg-ocean text-white border-ocean';
-    default:
-      return 'bg-stone-100 text-stone-600 border-stone-200';
-  }
-};
-
-const reviewClass = (status) => {
-  switch (status) {
-    case 'Reviewed':
-      return 'text-emerald-700';
-    case 'Needs info':
-      return 'text-rose-700';
-    default:
-      return 'text-amber-700';
-  }
-};
-
-// ============================================================================
-// ICONS
-// ============================================================================
-
-const IconSpark = ({ size = 24 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 2l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6L3.5 10.5 9.5 8z"></path>
+const IconArrowLeft = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="19" y1="12" x2="5" y2="12"></line>
+    <polyline points="12 19 5 12 12 5"></polyline>
   </svg>
 );
 
-const IconTarget = ({ size = 24 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="9"></circle>
-    <circle cx="12" cy="12" r="5"></circle>
-    <circle cx="12" cy="12" r="1"></circle>
+const IconSearch = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8"></circle>
+    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
   </svg>
 );
 
 const IconPlus = ({ size = 24 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 5v14"></path>
-    <path d="M5 12h14"></path>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19"></line>
+    <line x1="5" y1="12" x2="19" y2="12"></line>
   </svg>
 );
 
-const IconArrow = ({ size = 20 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 12h14"></path>
-    <path d="M13 5l7 7-7 7"></path>
+const IconX = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18"></line>
+    <line x1="6" y1="6" x2="18" y2="18"></line>
   </svg>
 );
 
-const IconBack = ({ size = 20 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M19 12H5"></path>
-    <path d="M11 5l-7 7 7 7"></path>
+const IconChevronLeft = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="15 18 9 12 15 6"></polyline>
   </svg>
 );
 
-const IconRefresh = ({ size = 20 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 12a9 9 0 0 1 15.3-6.3"></path>
-    <path d="M21 12a9 9 0 0 1-15.3 6.3"></path>
-    <path d="M18 6v4h-4"></path>
-    <path d="M6 18v-4h4"></path>
+const IconChevronRight = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </svg>
+);
+
+const IconEdit = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+  </svg>
+);
+
+const IconGrid = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="7" height="7"></rect>
+    <rect x="14" y="3" width="7" height="7"></rect>
+    <rect x="14" y="14" width="7" height="7"></rect>
+    <rect x="3" y="14" width="7" height="7"></rect>
+  </svg>
+);
+
+const IconZoomIn = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8"></circle>
+    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    <line x1="11" y1="8" x2="11" y2="14"></line>
+    <line x1="8" y1="11" x2="14" y2="11"></line>
+  </svg>
+);
+
+const IconRefresh = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 4 23 10 17 10"></polyline>
+    <polyline points="1 20 1 14 7 14"></polyline>
+    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+  </svg>
+);
+
+const IconCloud = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
+  </svg>
+);
+
+const IconCheck = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12"></polyline>
+  </svg>
+);
+
+const IconLoader = ({ size = 24, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`animate-spin ${className}`}>
+    <circle cx="12" cy="12" r="10" strokeOpacity="0.25"></circle>
+    <path d="M12 2a10 10 0 0 1 10 10" strokeOpacity="1"></path>
   </svg>
 );
 
 // ============================================================================
-// UI COMPONENTS
+// IMAGE GALLERY COMPONENT
 // ============================================================================
 
-const ProgressBar = ({ value }) => (
-  <div className="w-full bg-stone-100 rounded-full h-3 overflow-hidden">
-    <div
-      className="h-full bg-clay transition-all"
-      style={{ width: `${Math.min(Math.max(value, 0), 100)}%` }}
-    ></div>
-  </div>
-);
+const ImageGallery = ({ images, title }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isZoomed, setIsZoomed] = useState(false);
 
-const StatusPill = ({ status }) => (
-  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${statusClass(status)}`}>
-    {status}
-  </span>
-);
-
-const KpiCard = ({ label, value, helper }) => (
-  <div className="glass rounded-2xl p-4 md:p-5 card-shadow">
-    <div className="text-xs uppercase tracking-wide text-steel">{label}</div>
-    <div className="text-2xl font-display text-ink mt-2">{value}</div>
-    {helper && <div className="text-xs text-steel mt-1">{helper}</div>}
-  </div>
-);
-
-const InitiativeCard = ({ initiative, onSelect }) => (
-  <button
-    onClick={onSelect}
-    className="text-left bg-white rounded-2xl border border-stone-100 p-5 card-shadow hover:-translate-y-0.5 transition-transform"
-  >
-    <div className="flex items-start justify-between gap-3">
-      <div>
-        <div className="text-xs uppercase tracking-wide text-steel">{initiative.pillar}</div>
-        <h3 className="font-display text-xl text-ink mt-1">{initiative.title}</h3>
+  if (!images || images.length === 0) {
+    return (
+      <div className="bg-stone-200 rounded-lg h-64 flex items-center justify-center">
+        <span className="text-stone-500">No images available</span>
       </div>
-      <StatusPill status={initiative.status} />
-    </div>
-    <p className="text-sm text-stone-600 mt-3">{initiative.description}</p>
-    <div className="mt-4">
-      <div className="flex items-center justify-between text-xs text-steel mb-2">
-        <span>{Math.round(initiative.progress)}% complete</span>
-        <span>Target: {initiative.targetDate || 'TBD'}</span>
-      </div>
-      <ProgressBar value={initiative.progress} />
-    </div>
-    <div className="flex items-center justify-between text-xs text-steel mt-4">
-      <span>Owner: {initiative.owner || 'Unassigned'}</span>
-      <span>Last update: {formatDate(initiative.lastUpdateAt)}</span>
-    </div>
-  </button>
-);
+    );
+  }
 
-const UpdateCard = ({ update, onReviewSave }) => {
-  const [reviewStatus, setReviewStatus] = useState(update.reviewStatus || 'Pending');
-  const [reviewNotes, setReviewNotes] = useState(update.reviewNotes || '');
+  const currentImage = images[currentIndex];
+
+  const goToPrevious = () => {
+    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  };
+
+  const goToNext = () => {
+    setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  };
 
   return (
-    <div className="bg-white rounded-2xl border border-stone-100 p-5 card-shadow">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-        <div>
-          <div className="text-xs uppercase tracking-wide text-steel">{formatDate(update.date)}</div>
-          <h4 className="font-display text-lg text-ink mt-1">{update.summary || 'Update'}</h4>
-          <p className="text-sm text-stone-600">Submitted by {update.author || 'Team member'}</p>
-        </div>
-        <div className={`text-xs font-semibold ${reviewClass(reviewStatus)}`}>
-          {reviewStatus}
-        </div>
-      </div>
-      {update.details && <p className="text-sm text-stone-700 mt-3 whitespace-pre-wrap">{update.details}</p>}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-stone-600 mt-4">
-        <div>
-          <div className="uppercase tracking-wide text-steel">Blockers</div>
-          <div>{update.blockers || 'None noted'}</div>
-        </div>
-        <div>
-          <div className="uppercase tracking-wide text-steel">Next steps</div>
-          <div>{update.nextSteps || 'No next steps yet'}</div>
-        </div>
-        <div>
-          <div className="uppercase tracking-wide text-steel">Progress</div>
-          <div>{typeof update.progress === 'number' ? `${Math.round(update.progress)}%` : 'Not shared'}</div>
-        </div>
-      </div>
-      {update.links && (
-        <div className="mt-3 text-xs text-ocean">
-          <a href={update.links} target="_blank" rel="noreferrer" className="underline">
-            View supporting link
-          </a>
-        </div>
-      )}
-      <div className="mt-4 pt-4 border-t border-stone-100">
-        <div className="text-xs uppercase tracking-wide text-steel">Co-champion review</div>
-        <div className="flex flex-col md:flex-row md:items-center gap-3 mt-2">
-          <select
-            value={reviewStatus}
-            onChange={(event) => setReviewStatus(event.target.value)}
-            className="px-3 py-2 border border-stone-200 rounded-lg bg-white text-sm"
-          >
-            {REVIEW_STATUSES.map((status) => (
-              <option key={status} value={status}>{status}</option>
-            ))}
-          </select>
-          <input
-            type="text"
-            value={reviewNotes}
-            onChange={(event) => setReviewNotes(event.target.value)}
-            placeholder="Review notes"
-            className="flex-1 px-3 py-2 border border-stone-200 rounded-lg text-sm"
+    <>
+      <div className="relative bg-stone-100 rounded-xl overflow-hidden">
+        <div
+          className="relative aspect-[4/3] cursor-zoom-in"
+          onClick={() => setIsZoomed(true)}
+        >
+          <img
+            src={currentImage.url}
+            alt={currentImage.caption || title}
+            className="w-full h-full object-cover"
+            decoding="async"
           />
           <button
-            onClick={() => onReviewSave(update.id, reviewStatus, reviewNotes)}
-            className="px-4 py-2 bg-ocean text-white rounded-lg text-sm"
+            className="absolute top-4 right-4 bg-white/80 hover:bg-white p-2 rounded-full transition-colors"
+            onClick={(e) => { e.stopPropagation(); setIsZoomed(true); }}
           >
-            Save review
+            <IconZoomIn size={20} />
           </button>
         </div>
+
+        {images.length > 1 && (
+          <>
+            <button
+              onClick={goToPrevious}
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors shadow-md"
+            >
+              <IconChevronLeft size={24} />
+            </button>
+            <button
+              onClick={goToNext}
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors shadow-md"
+            >
+              <IconChevronRight size={24} />
+            </button>
+          </>
+        )}
+
+        {currentImage.caption && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 pt-8">
+            <p className="text-white text-sm">{currentImage.caption}</p>
+          </div>
+        )}
       </div>
+
+      {images.length > 1 && (
+        <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
+          {images.map((img, idx) => (
+            <button
+              key={idx}
+              onClick={() => setCurrentIndex(idx)}
+              className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                idx === currentIndex ? 'border-gold ring-2 ring-gold/30' : 'border-transparent opacity-70 hover:opacity-100'
+              }`}
+            >
+              <img
+                src={img.url}
+                alt=""
+                className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
+              />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {isZoomed && (
+        <div
+          className="fixed inset-0 z-50 lightbox-overlay flex items-center justify-center p-4"
+          onClick={() => setIsZoomed(false)}
+        >
+          <button
+            className="absolute top-4 right-4 text-white hover:text-stone-300 transition-colors"
+            onClick={() => setIsZoomed(false)}
+          >
+            <IconX size={32} />
+          </button>
+          <img
+            src={currentImage.url}
+            alt={currentImage.caption || title}
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+            decoding="async"
+          />
+          {currentImage.caption && (
+            <p className="absolute bottom-4 left-4 right-4 text-center text-white text-sm">
+              {currentImage.caption}
+            </p>
+          )}
+          {images.length > 1 && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); goToPrevious(); }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-3 rounded-full transition-colors"
+              >
+                <IconChevronLeft size={32} className="text-white" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); goToNext(); }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-3 rounded-full transition-colors"
+              >
+                <IconChevronRight size={32} className="text-white" />
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </>
+  );
+};
+
+// ============================================================================
+// METADATA COMPONENTS
+// ============================================================================
+
+const MetadataField = ({ label, value, onClick, isClickable = false }) => {
+  if (!value || (Array.isArray(value) && value.length === 0)) return null;
+
+  const displayValue = Array.isArray(value) ? value.join(', ') : value;
+
+  return (
+    <div className="py-3">
+      <div className="metadata-label">{label}</div>
+      {isClickable ? (
+        <button
+          onClick={onClick}
+          className="metadata-value text-gold hover:text-gold-dark transition-colors text-left"
+        >
+          {displayValue}
+        </button>
+      ) : (
+        <div className="metadata-value">{displayValue}</div>
+      )}
     </div>
   );
 };
 
-const UpdateForm = ({ initiative, onSubmit }) => {
-  const [author, setAuthor] = useState('');
-  const [summary, setSummary] = useState('');
-  const [details, setDetails] = useState('');
-  const [blockers, setBlockers] = useState('');
-  const [nextSteps, setNextSteps] = useState('');
-  const [progress, setProgress] = useState(initiative.progress || 0);
-  const [links, setLinks] = useState('');
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    const update = {
-      id: makeId(),
-      date: new Date().toISOString(),
-      author,
-      summary,
-      details,
-      blockers,
-      nextSteps,
-      progress: Number(progress) || 0,
-      links,
-      reviewStatus: 'Pending',
-      reviewNotes: ''
-    };
-    onSubmit(update);
-    setAuthor('');
-    setSummary('');
-    setDetails('');
-    setBlockers('');
-    setNextSteps('');
-    setProgress(initiative.progress || 0);
-    setLinks('');
-  };
-
+const MetadataGrid = ({ object, onFilterClick }) => {
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-stone-100 p-5 card-shadow">
-      <div className="flex items-center justify-between">
-        <h3 className="font-display text-xl">Submit progress update</h3>
-        <span className="text-xs text-steel">Visible to board members</span>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-        <div>
-          <label className="text-xs uppercase tracking-wide text-steel">Your name</label>
-          <input
-            type="text"
-            value={author}
-            onChange={(event) => setAuthor(event.target.value)}
-            className="w-full mt-1 px-3 py-2 border border-stone-200 rounded-lg"
-            placeholder="Name or team"
-            required
-          />
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-wide text-steel">Update headline</label>
-          <input
-            type="text"
-            value={summary}
-            onChange={(event) => setSummary(event.target.value)}
-            className="w-full mt-1 px-3 py-2 border border-stone-200 rounded-lg"
-            placeholder="Short summary"
-            required
-          />
-        </div>
-        <div className="md:col-span-2">
-          <label className="text-xs uppercase tracking-wide text-steel">Details</label>
-          <textarea
-            value={details}
-            onChange={(event) => setDetails(event.target.value)}
-            className="w-full mt-1 px-3 py-2 border border-stone-200 rounded-lg min-h-[120px]"
-            placeholder="What changed? What decisions were made?"
-          />
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-wide text-steel">Blockers</label>
-          <input
-            type="text"
-            value={blockers}
-            onChange={(event) => setBlockers(event.target.value)}
-            className="w-full mt-1 px-3 py-2 border border-stone-200 rounded-lg"
-            placeholder="Risks or constraints"
-          />
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-wide text-steel">Next steps</label>
-          <input
-            type="text"
-            value={nextSteps}
-            onChange={(event) => setNextSteps(event.target.value)}
-            className="w-full mt-1 px-3 py-2 border border-stone-200 rounded-lg"
-            placeholder="Immediate actions"
-          />
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-wide text-steel">Updated progress (%)</label>
-          <input
-            type="number"
-            min="0"
-            max="100"
-            value={progress}
-            onChange={(event) => setProgress(event.target.value)}
-            className="w-full mt-1 px-3 py-2 border border-stone-200 rounded-lg"
-          />
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-wide text-steel">Supporting link</label>
-          <input
-            type="url"
-            value={links}
-            onChange={(event) => setLinks(event.target.value)}
-            className="w-full mt-1 px-3 py-2 border border-stone-200 rounded-lg"
-            placeholder="https://"
-          />
-        </div>
-      </div>
-      <div className="mt-4 flex items-center justify-end">
-        <button type="submit" className="px-5 py-2 bg-clay text-white rounded-lg">Submit update</button>
-      </div>
-    </form>
-  );
-};
-
-const InitiativeForm = ({ initiative, onSave, onCancel, isSaving }) => {
-  const [form, setForm] = useState(() => ({
-    title: initiative?.title || '',
-    pillar: initiative?.pillar || '',
-    description: initiative?.description || '',
-    owner: initiative?.owner || '',
-    coChampions: initiative?.coChampions || '',
-    status: initiative?.status || STATUSES[0],
-    progress: initiative?.progress || 0,
-    targetDate: initiative?.targetDate || '',
-    successMetrics: initiative?.successMetrics || '',
-    notes: initiative?.notes || ''
-  }));
-
-  const updateField = (field, value) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    const next = {
-      ...initiative,
-      ...form,
-      progress: Number(form.progress) || 0,
-      updates: initiative?.updates || []
-    };
-    onSave(next);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-stone-100 p-6 card-shadow">
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-2xl">{initiative ? 'Edit initiative' : 'Add initiative'}</h2>
-        <span className="text-xs text-steel">Visible to board leaders</span>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
-        <div className="md:col-span-2">
-          <label className="text-xs uppercase tracking-wide text-steel">Initiative title</label>
-          <input
-            type="text"
-            value={form.title}
-            onChange={(event) => updateField('title', event.target.value)}
-            className="w-full mt-1 px-3 py-2 border border-stone-200 rounded-lg"
-            required
-          />
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-wide text-steel">Pillar</label>
-          <select
-            value={form.pillar}
-            onChange={(event) => updateField('pillar', event.target.value)}
-            className="w-full mt-1 px-3 py-2 border border-stone-200 rounded-lg bg-white"
-          >
-            <option value="">Select pillar</option>
-            {PILLARS.map((pillar) => (
-              <option key={pillar} value={pillar}>{pillar}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-wide text-steel">Owner</label>
-          <input
-            type="text"
-            value={form.owner}
-            onChange={(event) => updateField('owner', event.target.value)}
-            className="w-full mt-1 px-3 py-2 border border-stone-200 rounded-lg"
-            placeholder="Lead or team"
-          />
-        </div>
-        <div className="md:col-span-2">
-          <label className="text-xs uppercase tracking-wide text-steel">Description</label>
-          <textarea
-            value={form.description}
-            onChange={(event) => updateField('description', event.target.value)}
-            className="w-full mt-1 px-3 py-2 border border-stone-200 rounded-lg min-h-[120px]"
-          />
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-wide text-steel">Co-champions</label>
-          <input
-            type="text"
-            value={form.coChampions}
-            onChange={(event) => updateField('coChampions', event.target.value)}
-            className="w-full mt-1 px-3 py-2 border border-stone-200 rounded-lg"
-            placeholder="Names or roles"
-          />
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-wide text-steel">Status</label>
-          <select
-            value={form.status}
-            onChange={(event) => updateField('status', event.target.value)}
-            className="w-full mt-1 px-3 py-2 border border-stone-200 rounded-lg bg-white"
-          >
-            {STATUSES.map((status) => (
-              <option key={status} value={status}>{status}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-wide text-steel">Progress (%)</label>
-          <input
-            type="number"
-            min="0"
-            max="100"
-            value={form.progress}
-            onChange={(event) => updateField('progress', event.target.value)}
-            className="w-full mt-1 px-3 py-2 border border-stone-200 rounded-lg"
-          />
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-wide text-steel">Target date</label>
-          <input
-            type="date"
-            value={form.targetDate}
-            onChange={(event) => updateField('targetDate', event.target.value)}
-            className="w-full mt-1 px-3 py-2 border border-stone-200 rounded-lg"
-          />
-        </div>
-        <div className="md:col-span-2">
-          <label className="text-xs uppercase tracking-wide text-steel">Success metrics</label>
-          <input
-            type="text"
-            value={form.successMetrics}
-            onChange={(event) => updateField('successMetrics', event.target.value)}
-            className="w-full mt-1 px-3 py-2 border border-stone-200 rounded-lg"
-            placeholder="What does success look like?"
-          />
-        </div>
-        <div className="md:col-span-2">
-          <label className="text-xs uppercase tracking-wide text-steel">Notes</label>
-          <textarea
-            value={form.notes}
-            onChange={(event) => updateField('notes', event.target.value)}
-            className="w-full mt-1 px-3 py-2 border border-stone-200 rounded-lg min-h-[100px]"
-          />
-        </div>
-      </div>
-      <div className="mt-6 flex items-center justify-end gap-3">
-        <button type="button" onClick={onCancel} className="px-4 py-2 border border-stone-200 rounded-lg">
-          Cancel
-        </button>
-        <button type="submit" disabled={isSaving} className="px-5 py-2 bg-ocean text-white rounded-lg">
-          {isSaving ? 'Saving...' : 'Save initiative'}
-        </button>
-      </div>
-    </form>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 border-t border-stone-200">
+      <MetadataField
+        label="Object Type"
+        value={object.objectType}
+        isClickable
+        onClick={() => onFilterClick('objectType', object.objectType)}
+      />
+      <MetadataField label="Object Number" value={object.objectNumber} />
+      <MetadataField
+        label="Named Collection"
+        value={object.collection}
+        isClickable
+        onClick={() => onFilterClick('collection', object.collection)}
+      />
+      <MetadataField label="Portfolio Title" value={object.portfolioTitle} />
+      <MetadataField label="Medium & Materials" value={object.mediumMaterials} />
+      <MetadataField label="Measurements" value={object.measurements} />
+      <MetadataField
+        label="Designer"
+        value={object.designer}
+        isClickable={!!object.designer}
+        onClick={() => onFilterClick('designer', object.designer)}
+      />
+      <MetadataField
+        label="Maker"
+        value={object.maker}
+        isClickable={!!object.maker}
+        onClick={() => onFilterClick('maker', object.maker)}
+      />
+      <MetadataField label="Maker Role" value={object.makerRole} />
+      <MetadataField label="From (Origin/Donor/Source)" value={object.from} />
+    </div>
   );
 };
 
 // ============================================================================
-// VIEWS
+// OBJECT CARD COMPONENT
 // ============================================================================
 
-const DashboardView = ({ initiatives }) => {
-  const progressAvg = initiatives.length
-    ? Math.round(initiatives.reduce((sum, item) => sum + (Number(item.progress) || 0), 0) / initiatives.length)
-    : 0;
-
-  const statusCounts = STATUSES.reduce((acc, status) => {
-    acc[status] = initiatives.filter((item) => item.status === status).length;
-    return acc;
-  }, {});
-
-  const byPillar = PILLARS.map((pillar) => ({
-    pillar,
-    count: initiatives.filter((item) => item.pillar === pillar).length
-  }));
+const ObjectCard = ({ object, onClick }) => {
+  const primaryImage = object.images?.find(img => img.isPrimary) || object.images?.[0];
 
   return (
-    <div className="max-w-6xl mx-auto fade-up">
-      <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6">
-        <div className="glass rounded-3xl p-6 md:p-8 card-shadow">
-          <div className="flex items-center gap-3 text-ocean">
-            <IconSpark size={28} />
-            <span className="text-xs uppercase tracking-wide">Strategic plan overview</span>
+    <button
+      onClick={onClick}
+      className="bg-white rounded-xl border border-stone-200 overflow-hidden text-left card-hover w-full"
+    >
+      <div className="aspect-[4/3] bg-stone-100 overflow-hidden">
+        {primaryImage ? (
+          <img
+            src={primaryImage.url}
+            alt={object.title}
+            className="w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-stone-400">
+            No image
           </div>
-          <h1 className="font-display text-3xl md:text-4xl text-ink mt-4">
-            Keep the plan visible, updates flowing, and leadership aligned.
-          </h1>
-          <p className="text-stone-600 mt-3">
-            Track progress across strategic pillars, gather field updates, and review submissions in one shared space.
-          </p>
-          <div className="mt-6">
-            <div className="flex items-center justify-between text-xs text-steel mb-2">
-              <span>Overall progress</span>
-              <span>{progressAvg}%</span>
-            </div>
-            <ProgressBar value={progressAvg} />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <KpiCard label="Active initiatives" value={initiatives.length} helper="Across all pillars" />
-          <KpiCard label="On track" value={statusCounts['On track'] || 0} helper="Healthy momentum" />
-          <KpiCard label="At risk" value={statusCounts['At risk'] || 0} helper="Needs attention" />
-          <KpiCard label="Behind" value={statusCounts['Behind'] || 0} helper="Escalate support" />
-        </div>
+        )}
       </div>
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {byPillar.map((item) => (
-          <div key={item.pillar} className="bg-white rounded-2xl p-4 border border-stone-100 card-shadow">
-            <div className="text-xs uppercase tracking-wide text-steel">{item.pillar}</div>
-            <div className="font-display text-2xl mt-2">{item.count}</div>
-            <div className="text-xs text-stone-500">Initiatives tracked</div>
-          </div>
+      <div className="p-4">
+        <h3 className="font-display text-lg font-semibold text-stone-800 mb-1 line-clamp-2">
+          {object.title}
+        </h3>
+        <p className="text-sm text-stone-600 mb-2">{object.objectType}</p>
+        {object.collection && (
+          <p className="text-sm text-gold">{object.collection}</p>
+        )}
+      </div>
+    </button>
+  );
+};
+
+// ============================================================================
+// RELATED OBJECTS COMPONENT
+// ============================================================================
+
+const RelatedObjects = ({ currentObject, allObjects, onObjectClick }) => {
+  const relatedObjects = useMemo(() => {
+    if (!currentObject) return [];
+
+    const scored = allObjects
+      .filter(obj => obj.id !== currentObject.id)
+      .map(obj => {
+        let score = 0;
+        if (obj.collection === currentObject.collection) score += 3;
+        if (obj.objectType === currentObject.objectType) score += 2;
+        if (obj.designer && obj.designer === currentObject.designer) score += 2;
+        if (obj.maker && obj.maker === currentObject.maker) score += 2;
+        const sharedKeywords = obj.keywords?.filter(k =>
+          currentObject.keywords?.includes(k)
+        ) || [];
+        score += sharedKeywords.length;
+        return { ...obj, score };
+      })
+      .filter(obj => obj.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+
+    return scored;
+  }, [currentObject, allObjects]);
+
+  if (relatedObjects.length === 0) return null;
+
+  return (
+    <div className="mt-12">
+      <h3 className="font-display text-2xl font-semibold text-stone-800 mb-6">Related Objects</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {relatedObjects.map(obj => (
+          <ObjectCard key={obj.id} object={obj} onClick={() => onObjectClick(obj)} />
         ))}
       </div>
     </div>
   );
 };
 
-const InitiativesView = ({ initiatives, onSelect, onAdd, onRefresh, isLoading }) => {
-  const [search, setSearch] = useState('');
-  const [pillar, setPillar] = useState('');
-  const [status, setStatus] = useState('');
+// ============================================================================
+// TAG INPUT COMPONENT
+// ============================================================================
 
-  const filtered = useMemo(() => {
-    return initiatives.filter((item) => {
-      const text = [item.title, item.description, item.owner, item.coChampions, item.pillar, item.status]
-        .join(' ')
-        .toLowerCase();
-      if (search && !text.includes(search.toLowerCase())) return false;
-      if (pillar && item.pillar !== pillar) return false;
-      if (status && item.status !== status) return false;
-      return true;
-    });
-  }, [initiatives, search, pillar, status]);
+const TagInput = ({ tags, onChange, placeholder = "Add tag..." }) => {
+  const [inputValue, setInputValue] = useState('');
+
+  const addTag = () => {
+    const trimmed = inputValue.trim();
+    if (trimmed && !tags.includes(trimmed)) {
+      onChange([...tags, trimmed]);
+      setInputValue('');
+    }
+  };
+
+  const removeTag = (tagToRemove) => {
+    onChange(tags.filter(t => t !== tagToRemove));
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTag();
+    }
+  };
 
   return (
-    <div className="max-w-6xl mx-auto fade-up">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <div>
-          <h2 className="font-display text-3xl text-ink">Strategic initiatives</h2>
-          <p className="text-stone-600">Browse progress, submit updates, and review action items.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onRefresh}
-            className="px-4 py-2 border border-stone-200 rounded-lg text-sm"
-            disabled={isLoading}
-          >
-            <span className="inline-flex items-center gap-2">
-              <IconRefresh size={16} /> Refresh
-            </span>
-          </button>
-          <button onClick={onAdd} className="px-4 py-2 bg-clay text-white rounded-lg text-sm">
-            <span className="inline-flex items-center gap-2">
-              <IconPlus size={16} /> Add initiative
-            </span>
-          </button>
-        </div>
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        {tags.map((tag, idx) => (
+          <span key={idx} className="tag tag-gold flex items-center gap-1">
+            {tag}
+            <button
+              type="button"
+              onClick={() => removeTag(tag)}
+              className="hover:text-red-600 ml-1"
+            >
+              <IconX size={14} />
+            </button>
+          </span>
+        ))}
       </div>
-
-      <div className="bg-white rounded-2xl border border-stone-100 p-4 card-shadow mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <input
-            type="text"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search initiatives"
-            className="px-3 py-2 border border-stone-200 rounded-lg"
-          />
-          <select
-            value={pillar}
-            onChange={(event) => setPillar(event.target.value)}
-            className="px-3 py-2 border border-stone-200 rounded-lg bg-white"
-          >
-            <option value="">All pillars</option>
-            {PILLARS.map((item) => (
-              <option key={item} value={item}>{item}</option>
-            ))}
-          </select>
-          <select
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-            className="px-3 py-2 border border-stone-200 rounded-lg bg-white"
-          >
-            <option value="">All statuses</option>
-            {STATUSES.map((item) => (
-              <option key={item} value={item}>{item}</option>
-            ))}
-          </select>
-        </div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className="flex-1 px-3 py-2 border border-stone-300 rounded-lg text-sm"
+        />
+        <button
+          type="button"
+          onClick={addTag}
+          className="px-3 py-2 bg-stone-100 hover:bg-stone-200 rounded-lg transition-colors"
+        >
+          <IconPlus size={18} />
+        </button>
       </div>
-
-      {filtered.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-stone-100 p-8 text-center text-stone-600">
-          No initiatives found. Adjust filters or add a new initiative.
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {filtered.map((initiative) => (
-            <InitiativeCard
-              key={initiative.id}
-              initiative={initiative}
-              onSelect={() => onSelect(initiative.id)}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 };
 
-const InitiativeDetailView = ({ initiative, onBack, onEdit, onSubmitUpdate, onReviewUpdate }) => {
-  const updates = sortUpdates(initiative.updates || []);
+// ============================================================================
+// IMAGE INPUT COMPONENT
+// ============================================================================
+
+const ImageInput = ({ images, onChange }) => {
+  const [caption, setCaption] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef(null);
+
+  const readAsDataUrl = (file) => (
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    })
+  );
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadError('');
+
+    try {
+      const dataUrl = await readAsDataUrl(file);
+      const base64 = dataUrl.split(',')[1] || '';
+      if (!base64) throw new Error('Invalid image data');
+
+      const result = await SheetsAPI.uploadImage({
+        filename: file.name,
+        mimeType: file.type,
+        data: base64
+      });
+
+      const isPrimary = images.length === 0;
+      onChange([...images, { url: result.url, caption: caption.trim(), isPrimary }]);
+      setCaption('');
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      setUploadError('Upload failed. Please try again.');
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const removeImage = (idx) => {
+    const newImages = images.filter((_, i) => i !== idx);
+    if (newImages.length > 0 && !newImages.some(img => img.isPrimary)) {
+      newImages[0].isPrimary = true;
+    }
+    onChange(newImages);
+  };
+
+  const setPrimary = (idx) => {
+    onChange(images.map((img, i) => ({ ...img, isPrimary: i === idx })));
+  };
 
   return (
-    <div className="max-w-5xl mx-auto fade-up">
-      <button onClick={onBack} className="flex items-center gap-2 text-sm text-ocean mb-4">
-        <IconBack size={18} /> Back to initiatives
-      </button>
-
-      <div className="bg-white rounded-3xl border border-stone-100 p-6 md:p-8 card-shadow">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="text-xs uppercase tracking-wide text-steel">{initiative.pillar}</div>
-            <h1 className="font-display text-3xl text-ink mt-2">{initiative.title}</h1>
-            <p className="text-stone-600 mt-2">{initiative.description}</p>
-          </div>
-          <div className="flex flex-col items-start gap-3">
-            <StatusPill status={initiative.status} />
-            <button onClick={onEdit} className="px-4 py-2 border border-stone-200 rounded-lg text-sm">
-              Edit initiative
+    <div className="space-y-3">
+      {images.map((img, idx) => (
+        <div key={idx} className="flex items-start gap-3 bg-stone-50 p-3 rounded-lg">
+          <img src={img.url} alt="" className="w-16 h-16 object-cover rounded" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm truncate">{img.url}</p>
+            {img.caption && <p className="text-xs text-stone-500">{img.caption}</p>}
+            <button
+              type="button"
+              onClick={() => setPrimary(idx)}
+              className={`text-xs mt-1 ${img.isPrimary ? 'text-gold font-medium' : 'text-stone-400 hover:text-gold'}`}
+            >
+              {img.isPrimary ? 'Primary Image' : 'Set as Primary'}
             </button>
           </div>
+          <button
+            type="button"
+            onClick={() => removeImage(idx)}
+            className="text-stone-400 hover:text-red-600"
+          >
+            <IconX size={18} />
+          </button>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-          <div>
-            <div className="text-xs uppercase tracking-wide text-steel">Owner</div>
-            <div className="text-sm text-ink mt-1">{initiative.owner || 'Unassigned'}</div>
-          </div>
-          <div>
-            <div className="text-xs uppercase tracking-wide text-steel">Co-champions</div>
-            <div className="text-sm text-ink mt-1">{initiative.coChampions || 'Not listed'}</div>
-          </div>
-          <div>
-            <div className="text-xs uppercase tracking-wide text-steel">Target date</div>
-            <div className="text-sm text-ink mt-1">{initiative.targetDate || 'TBD'}</div>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          <div className="flex items-center justify-between text-xs text-steel mb-2">
-            <span>Progress</span>
-            <span>{Math.round(initiative.progress)}%</span>
-          </div>
-          <ProgressBar value={initiative.progress} />
-        </div>
-
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <div className="text-xs uppercase tracking-wide text-steel">Success metrics</div>
-            <div className="text-sm text-ink mt-1">{initiative.successMetrics || 'Not defined'}</div>
-          </div>
-          <div>
-            <div className="text-xs uppercase tracking-wide text-steel">Notes</div>
-            <div className="text-sm text-ink mt-1">{initiative.notes || 'No notes yet'}</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-6">
-        <UpdateForm initiative={initiative} onSubmit={(update) => onSubmitUpdate(initiative, update)} />
-      </div>
-
-      <div className="mt-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-2xl">Update log</h2>
-          <span className="text-xs text-steel">{updates.length} updates</span>
-        </div>
-        {updates.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-stone-100 p-6 text-stone-600">
-            No updates yet. Submit the first update to start the log.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4">
-            {updates.map((update) => (
-              <UpdateCard
-                key={update.id}
-                update={update}
-                onReviewSave={(updateId, status, notes) => onReviewUpdate(initiative, updateId, status, notes)}
-              />
-            ))}
-          </div>
+      ))}
+      <div className="space-y-2">
+        <input
+          type="text"
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+          placeholder="Caption (optional)"
+          className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
+        />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          className="flex items-center gap-2 px-4 py-2 bg-stone-100 hover:bg-stone-200 disabled:bg-stone-200 rounded-lg transition-colors text-sm"
+        >
+          {isUploading ? <IconLoader size={16} /> : <IconPlus size={16} />}
+          {isUploading ? 'Uploading...' : 'Add Image'}
+        </button>
+        {uploadError && (
+          <p className="text-xs text-red-600">{uploadError}</p>
         )}
       </div>
     </div>
@@ -974,28 +801,543 @@ const InitiativeDetailView = ({ initiative, onBack, onEdit, onSubmitUpdate, onRe
 };
 
 // ============================================================================
-// MAIN APP
+// ADMIN FORM COMPONENT
 // ============================================================================
 
-const StrategyApp = () => {
-  const [initiatives, setInitiatives] = useState([]);
-  const [view, setView] = useState('dashboard');
-  const [selectedId, setSelectedId] = useState(null);
-  const [editingId, setEditingId] = useState(null);
+const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
+  const [form, setForm] = useState({
+    title: '',
+    aboutText: '',
+    images: [],
+    from: '',
+    designer: '',
+    maker: '',
+    makerRole: '',
+    portfolioTitle: '',
+    mediumMaterials: '',
+    measurements: '',
+    keywords: [],
+    collection: '',
+    objectType: '',
+    objectNumber: '',
+    ...object
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!form.title.trim()) {
+      alert('Title is required');
+      return;
+    }
+    onSave({
+      ...form,
+      id: form.id || Date.now().toString(),
+      createdAt: form.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+  };
+
+  const updateField = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Images */}
+      <section>
+        <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Images</h3>
+        <p className="text-sm text-stone-500 mb-3">Add multiple images with zoom and carousel support</p>
+        <ImageInput
+          images={form.images}
+          onChange={(images) => updateField('images', images)}
+        />
+      </section>
+
+      {/* From */}
+      <section>
+        <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Origin Information</h3>
+        <div>
+          <label className="block text-sm font-medium text-stone-700 mb-1">
+            From (Origin, Donor, or Source)
+          </label>
+          <input
+            type="text"
+            value={form.from}
+            onChange={(e) => updateField('from', e.target.value)}
+            placeholder="e.g., Original Construction, Donated by Smith Family"
+            className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+          />
+        </div>
+      </section>
+
+      {/* Basic Info */}
+      <section>
+        <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Basic Information</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">
+              Name / Title <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={form.title}
+              onChange={(e) => updateField('title', e.target.value)}
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">About this Object</label>
+            <textarea
+              value={form.aboutText}
+              onChange={(e) => updateField('aboutText', e.target.value)}
+              rows={5}
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg resize-none"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Creators */}
+      <section>
+        <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Creators</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Designer(s)</label>
+            <input
+              type="text"
+              value={form.designer}
+              onChange={(e) => updateField('designer', e.target.value)}
+              placeholder="e.g., Julia Morgan"
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Maker</label>
+            <input
+              type="text"
+              value={form.maker}
+              onChange={(e) => updateField('maker', e.target.value)}
+              placeholder="e.g., Pacific Lumber Company"
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Maker Role</label>
+            <select
+              value={form.makerRole}
+              onChange={(e) => updateField('makerRole', e.target.value)}
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white"
+            >
+              <option value="">Select role...</option>
+              {MAKER_ROLES.map(role => (
+                <option key={role} value={role}>{role}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Portfolio Title</label>
+            <input
+              type="text"
+              value={form.portfolioTitle}
+              onChange={(e) => updateField('portfolioTitle', e.target.value)}
+              placeholder="e.g., North Star House - Structural Elements"
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Physical Details */}
+      <section>
+        <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Physical Details</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Medium and Materials</label>
+            <input
+              type="text"
+              value={form.mediumMaterials}
+              onChange={(e) => updateField('mediumMaterials', e.target.value)}
+              placeholder="e.g., Old-growth Redwood, Wrought Iron"
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Measurements</label>
+            <input
+              type="text"
+              value={form.measurements}
+              onChange={(e) => updateField('measurements', e.target.value)}
+              placeholder='e.g., 24" x 36" x 12"'
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Keywords */}
+      <section>
+        <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Subject and Association Keywords</h3>
+        <TagInput
+          tags={form.keywords}
+          onChange={(tags) => updateField('keywords', tags)}
+          placeholder="Add keyword..."
+        />
+      </section>
+
+      {/* Classification */}
+      <section>
+        <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Classification</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Named Collection</label>
+            <select
+              value={form.collection}
+              onChange={(e) => updateField('collection', e.target.value)}
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white"
+            >
+              <option value="">Select collection...</option>
+              {COLLECTIONS.map(col => (
+                <option key={col} value={col}>{col}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Object Type</label>
+            <select
+              value={form.objectType}
+              onChange={(e) => updateField('objectType', e.target.value)}
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white"
+            >
+              <option value="">Select type...</option>
+              {OBJECT_TYPES.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-stone-700 mb-1">Object Number</label>
+            <input
+              type="text"
+              value={form.objectNumber}
+              onChange={(e) => updateField('objectNumber', e.target.value)}
+              placeholder="e.g., NSH.1905.001"
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Actions */}
+      <div className="flex gap-4 pt-4 border-t border-stone-200">
+        <button
+          type="submit"
+          disabled={isSaving}
+          className="flex-1 bg-gold hover:bg-gold-dark disabled:bg-stone-400 text-white py-3 px-6 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+        >
+          {isSaving ? (
+            <>
+              <IconLoader size={20} />
+              Saving...
+            </>
+          ) : (
+            <>
+              <IconCloud size={20} />
+              {object?.id ? 'Save Changes' : 'Add Object'}
+            </>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isSaving}
+          className="px-6 py-3 bg-stone-100 hover:bg-stone-200 disabled:bg-stone-100 rounded-lg font-medium transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+};
+
+// ============================================================================
+// OBJECT DETAIL VIEW
+// ============================================================================
+
+const ObjectDetailView = ({ object, allObjects, onBack, onEdit, onFilterClick, onObjectClick }) => {
+  return (
+    <div className="max-w-4xl mx-auto">
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-stone-600 hover:text-gold transition-colors mb-6"
+      >
+        <IconArrowLeft size={20} />
+        <span>Back to Collection</span>
+      </button>
+
+      <ImageGallery images={object.images} title={object.title} />
+
+      <div className="mt-8 mb-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="font-display text-3xl md:text-4xl font-semibold text-stone-800">
+              {object.title}
+            </h1>
+            {object.portfolioTitle && (
+              <p className="text-lg text-stone-500 italic mt-1">{object.portfolioTitle}</p>
+            )}
+          </div>
+          <button
+            onClick={() => onEdit(object)}
+            className="flex items-center gap-2 px-4 py-2 bg-stone-100 hover:bg-stone-200 rounded-lg transition-colors text-sm"
+          >
+            <IconEdit size={16} />
+            Edit
+          </button>
+        </div>
+      </div>
+
+      {object.aboutText && (
+        <div className="mb-8">
+          <h2 className="font-display text-xl font-semibold text-stone-800 mb-3">About this Object</h2>
+          <p className="text-stone-700 leading-relaxed whitespace-pre-wrap">{object.aboutText}</p>
+        </div>
+      )}
+
+      <MetadataGrid object={object} onFilterClick={onFilterClick} />
+
+      {object.keywords && object.keywords.length > 0 && (
+        <div className="mt-6 pt-6 border-t border-stone-200">
+          <h3 className="metadata-label mb-2">Subject & Association Keywords</h3>
+          <div className="flex flex-wrap gap-2">
+            {object.keywords.map((keyword, idx) => (
+              <button
+                key={idx}
+                onClick={() => onFilterClick('keywords', keyword)}
+                className="tag"
+              >
+                {keyword}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <RelatedObjects
+        currentObject={object}
+        allObjects={allObjects}
+        onObjectClick={onObjectClick}
+      />
+    </div>
+  );
+};
+
+// ============================================================================
+// BROWSE VIEW
+// ============================================================================
+
+const BrowseView = ({ objects, filters, onFilterChange, onObjectClick, onAddNew, onRefresh, isLoading, isConnected }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const objectTypes = [...new Set(objects.map(o => o.objectType).filter(Boolean))];
+  const collections = [...new Set(objects.map(o => o.collection).filter(Boolean))];
+
+  const filteredObjects = useMemo(() => {
+    return objects.filter(obj => {
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const searchableText = [
+          obj.title,
+          obj.aboutText,
+          obj.objectType,
+          obj.designer,
+          obj.maker,
+          obj.from,
+          obj.mediumMaterials,
+          obj.portfolioTitle,
+          ...(obj.keywords || [])
+        ].join(' ').toLowerCase();
+        if (!searchableText.includes(query)) return false;
+      }
+      if (filters.objectType && obj.objectType !== filters.objectType) return false;
+      if (filters.collection && obj.collection !== filters.collection) return false;
+      if (filters.keywords && !obj.keywords?.includes(filters.keywords)) return false;
+      if (filters.designer && obj.designer !== filters.designer) return false;
+      if (filters.maker && obj.maker !== filters.maker) return false;
+      return true;
+    });
+  }, [objects, searchQuery, filters]);
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    onFilterChange({});
+  };
+
+  const hasActiveFilters = searchQuery || Object.values(filters).some(v => v);
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="font-display text-3xl md:text-4xl font-semibold text-stone-800">Archives</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-stone-600">North Star House Collection</p>
+            {isConnected ? (
+              <span className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                <IconCheck size={12} /> Synced
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-xs text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full">
+                <IconCloud size={12} /> Local
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={onRefresh}
+            disabled={isLoading}
+            className="flex items-center gap-2 px-4 py-3 bg-stone-100 hover:bg-stone-200 rounded-lg transition-colors"
+            title="Refresh from Google Sheets"
+          >
+            <IconRefresh size={20} className={isLoading ? 'animate-spin' : ''} />
+          </button>
+          <button
+            onClick={onAddNew}
+            className="flex items-center gap-2 bg-gold hover:bg-gold-dark text-white px-5 py-3 rounded-lg font-medium transition-colors"
+          >
+            <IconPlus size={20} />
+            Add Object
+          </button>
+        </div>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="bg-white rounded-xl border border-stone-200 p-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <IconSearch size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search objects, keywords, makers..."
+              className="w-full pl-10 pr-4 py-3 border border-stone-300 rounded-lg"
+            />
+          </div>
+          <select
+            value={filters.objectType || ''}
+            onChange={(e) => onFilterChange({ ...filters, objectType: e.target.value || null })}
+            className="px-4 py-3 border border-stone-300 rounded-lg bg-white min-w-[160px]"
+          >
+            <option value="">All Types</option>
+            {objectTypes.map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+          <select
+            value={filters.collection || ''}
+            onChange={(e) => onFilterChange({ ...filters, collection: e.target.value || null })}
+            className="px-4 py-3 border border-stone-300 rounded-lg bg-white min-w-[180px]"
+          >
+            <option value="">All Collections</option>
+            {collections.map(col => (
+              <option key={col} value={col}>{col}</option>
+            ))}
+          </select>
+        </div>
+
+        {hasActiveFilters && (
+          <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-stone-100">
+            <span className="text-sm text-stone-500">Active filters:</span>
+            {searchQuery && (
+              <span className="tag tag-gold">
+                Search: "{searchQuery}"
+                <button onClick={() => setSearchQuery('')} className="ml-1"><IconX size={14} /></button>
+              </span>
+            )}
+            {filters.objectType && (
+              <span className="tag tag-gold">
+                Type: {filters.objectType}
+                <button onClick={() => onFilterChange({ ...filters, objectType: null })} className="ml-1"><IconX size={14} /></button>
+              </span>
+            )}
+            {filters.collection && (
+              <span className="tag tag-gold">
+                Collection: {filters.collection}
+                <button onClick={() => onFilterChange({ ...filters, collection: null })} className="ml-1"><IconX size={14} /></button>
+              </span>
+            )}
+            {filters.keywords && (
+              <span className="tag tag-gold">
+                Keyword: {filters.keywords}
+                <button onClick={() => onFilterChange({ ...filters, keywords: null })} className="ml-1"><IconX size={14} /></button>
+              </span>
+            )}
+            {filters.designer && (
+              <span className="tag tag-gold">
+                Designer: {filters.designer}
+                <button onClick={() => onFilterChange({ ...filters, designer: null })} className="ml-1"><IconX size={14} /></button>
+              </span>
+            )}
+            {filters.maker && (
+              <span className="tag tag-gold">
+                Maker: {filters.maker}
+                <button onClick={() => onFilterChange({ ...filters, maker: null })} className="ml-1"><IconX size={14} /></button>
+              </span>
+            )}
+            <button onClick={clearFilters} className="text-sm text-gold hover:text-gold-dark ml-2">
+              Clear all
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Results */}
+      <p className="text-stone-600 mb-4">
+        {filteredObjects.length} {filteredObjects.length === 1 ? 'object' : 'objects'} found
+      </p>
+
+      {isLoading ? (
+        <div className="text-center py-16 bg-white rounded-xl border border-stone-200">
+          <IconLoader size={48} className="mx-auto text-gold mb-4" />
+          <p className="text-stone-600 text-lg">Loading from Google Sheets...</p>
+        </div>
+      ) : filteredObjects.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-xl border border-stone-200">
+          <IconGrid size={48} className="mx-auto text-stone-300 mb-4" />
+          <p className="text-stone-600 text-lg">No objects match your search</p>
+          <button onClick={clearFilters} className="mt-4 text-gold hover:text-gold-dark">
+            Clear filters
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredObjects.map(obj => (
+            <ObjectCard key={obj.id} object={obj} onClick={() => onObjectClick(obj)} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================================================
+// MAIN APP COMPONENT
+// ============================================================================
+
+const ArchiveApp = () => {
+  const [objects, setObjects] = useState([]);
+  const [view, setView] = useState('browse');
+  const [selectedObject, setSelectedObject] = useState(null);
+  const [editingObject, setEditingObject] = useState(null);
+  const [filters, setFilters] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
 
-  const selectedInitiative = useMemo(
-    () => initiatives.find((item) => item.id === selectedId) || null,
-    [initiatives, selectedId]
-  );
-
-  const editingInitiative = useMemo(
-    () => initiatives.find((item) => item.id === editingId) || null,
-    [initiatives, editingId]
-  );
-
+  // Load data on mount
   useEffect(() => {
     loadData();
   }, []);
@@ -1003,7 +1345,7 @@ const StrategyApp = () => {
   const loadData = async ({ useCache = true } = {}) => {
     if (!USE_SHEETS) {
       const cached = readCache();
-      setInitiatives((cached?.objects || []).map(normalizeInitiative));
+      setObjects(cached?.objects || []);
       setIsConnected(false);
       setIsLoading(false);
       return;
@@ -1013,7 +1355,7 @@ const StrategyApp = () => {
     const isCacheFresh = cached && (Date.now() - cached.updatedAt) < CACHE_TTL_MS;
 
     if (cached?.objects?.length) {
-      setInitiatives(cached.objects.map(normalizeInitiative));
+      setObjects(cached.objects);
       setIsConnected(SheetsAPI.isConfigured());
       setIsLoading(false);
     } else {
@@ -1025,195 +1367,169 @@ const StrategyApp = () => {
         // Still refresh in the background for latest changes.
       }
       const data = await SheetsAPI.fetchAll();
-      const normalized = (data || []).map(normalizeInitiative);
-      setInitiatives(normalized);
+      setObjects(data);
       setIsConnected(SheetsAPI.isConfigured());
-      writeCache(normalized);
+      writeCache(data);
     } catch (error) {
       console.error('Failed to load data:', error);
       if (!cached?.objects?.length) {
-        setInitiatives(SAMPLE_INITIATIVES.map(normalizeInitiative));
+        setObjects(SAMPLE_OBJECTS);
       }
     }
 
     setIsLoading(false);
   };
 
-  const handleSelect = (id) => {
-    setSelectedId(id);
+  const handleObjectClick = (obj) => {
+    setSelectedObject(obj);
     setView('detail');
     window.scrollTo(0, 0);
   };
 
-  const handleAdd = () => {
-    setEditingId(null);
+  const handleBack = () => {
+    setSelectedObject(null);
+    setView('browse');
+  };
+
+  const handleAddNew = () => {
+    setEditingObject(null);
     setView('add');
     window.scrollTo(0, 0);
   };
 
-  const handleEdit = (initiative) => {
-    setEditingId(initiative.id);
+  const handleEdit = (obj) => {
+    setEditingObject(obj);
     setView('edit');
     window.scrollTo(0, 0);
   };
 
-  const handleSaveInitiative = async (initiative) => {
+  const handleSave = async (savedObject) => {
     setIsSaving(true);
     try {
-      if (editingInitiative) {
-        const updated = await SheetsAPI.update({ ...initiative, updates: initiative.updates || [] });
-        setInitiatives((prev) => {
-          const next = prev.map((item) => (item.id === updated.id ? normalizeInitiative(updated) : item));
+      if (editingObject) {
+        await SheetsAPI.update(savedObject);
+        setObjects(prev => {
+          const next = prev.map(o => o.id === savedObject.id ? savedObject : o);
           writeCache(next);
           return next;
         });
-        setSelectedId(updated.id);
-        setView('detail');
+        setSelectedObject(savedObject);
       } else {
-        const created = await SheetsAPI.create({
-          ...initiative,
-          id: initiative.id || makeId(),
-          updates: initiative.updates || []
-        });
-        setInitiatives((prev) => {
-          const next = [...prev, normalizeInitiative(created)];
+        const newObj = await SheetsAPI.create(savedObject);
+        setObjects(prev => {
+          const next = [...prev, newObj];
           writeCache(next);
           return next;
         });
-        setSelectedId(created.id);
-        setView('detail');
+        setSelectedObject(newObj);
       }
+      setView('detail');
+      setEditingObject(null);
     } catch (error) {
-      console.error('Failed to save initiative:', error);
+      console.error('Failed to save:', error);
       alert('Failed to save. Please try again.');
     }
     setIsSaving(false);
   };
 
-  const handleSubmitUpdate = async (initiative, update) => {
-    const updates = [update, ...(initiative.updates || [])];
-    const next = {
-      ...initiative,
-      updates,
-      progress: update.progress,
-      lastUpdateAt: update.date
-    };
-    try {
-      await SheetsAPI.update(next);
-      setInitiatives((prev) => {
-        const updated = prev.map((item) => (item.id === initiative.id ? normalizeInitiative(next) : item));
-        writeCache(updated);
-        return updated;
-      });
-    } catch (error) {
-      console.error('Failed to submit update:', error);
-      alert('Failed to submit update. Please try again.');
+  const handleCancel = () => {
+    if (selectedObject) {
+      setView('detail');
+    } else {
+      setView('browse');
     }
+    setEditingObject(null);
   };
 
-  const handleReviewUpdate = async (initiative, updateId, status, notes) => {
-    const updates = (initiative.updates || []).map((item) =>
-      item.id === updateId ? { ...item, reviewStatus: status, reviewNotes: notes } : item
-    );
-    const next = { ...initiative, updates };
-    try {
-      await SheetsAPI.update(next);
-      setInitiatives((prev) => {
-        const updated = prev.map((item) => (item.id === initiative.id ? normalizeInitiative(next) : item));
-        writeCache(updated);
-        return updated;
-      });
-    } catch (error) {
-      console.error('Failed to save review:', error);
-      alert('Failed to save review. Please try again.');
-    }
+  const handleFilterClick = (filterType, value) => {
+    setFilters({ [filterType]: value });
+    setSelectedObject(null);
+    setView('browse');
+    window.scrollTo(0, 0);
   };
-
-  const isDetailReady = view === 'detail' && selectedInitiative;
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-stone-100">
+    <div className="min-h-screen bg-stone-50">
+      {/* Header */}
+      <header className="bg-white border-b border-stone-200 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-ocean text-white flex items-center justify-center">
-                <IconTarget size={20} />
+            <button
+              onClick={() => { setView('browse'); setSelectedObject(null); setFilters({}); }}
+              className="flex items-center gap-3"
+            >
+              <div className="w-10 h-10 rounded-full bg-gold flex items-center justify-center">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="white">
+                  <path d="M12 3.5l2.6 5.9L21 12l-6.4 2.6L12 20.5l-2.6-5.9L3 12l6.4-2.6L12 3.5z" />
+                </svg>
               </div>
-              <div>
-                <div className="font-display text-lg text-ink">North Star Strategic Plan</div>
-                <div className="text-xs text-steel">Board progress tracker</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <button
-                onClick={() => { setView('dashboard'); setSelectedId(null); }}
-                className={`px-3 py-2 rounded-lg ${view === 'dashboard' ? 'bg-stone-100' : ''}`}
-              >
-                Dashboard
-              </button>
-              <button
-                onClick={() => { setView('list'); setSelectedId(null); }}
-                className={`px-3 py-2 rounded-lg ${view === 'list' ? 'bg-stone-100' : ''}`}
-              >
-                Initiatives
-              </button>
-              <span className={`text-xs ${isConnected ? 'text-emerald-600' : 'text-steel'}`}>
-                {isConnected ? 'Synced' : 'Local'}
+              <span className="font-display text-xl font-semibold text-stone-800">
+                North Star House
               </span>
-            </div>
+            </button>
+            <span className="text-stone-500 text-sm hidden sm:block">Archives Collection</span>
           </div>
         </div>
       </header>
 
+      {/* Main Content */}
       <main className="px-4 sm:px-6 lg:px-8 py-8">
-        {isLoading ? (
-          <div className="max-w-4xl mx-auto bg-white rounded-2xl border border-stone-100 p-8 text-center text-stone-600">
-            Loading strategic plan data...
+        {view === 'browse' && (
+          <BrowseView
+            objects={objects}
+            filters={filters}
+            onFilterChange={setFilters}
+            onObjectClick={handleObjectClick}
+            onAddNew={handleAddNew}
+            onRefresh={() => loadData({ useCache: false })}
+            isLoading={isLoading}
+            isConnected={isConnected}
+          />
+        )}
+
+        {view === 'detail' && selectedObject && (
+          <ObjectDetailView
+            object={selectedObject}
+            allObjects={objects}
+            onBack={handleBack}
+            onEdit={handleEdit}
+            onFilterClick={handleFilterClick}
+            onObjectClick={handleObjectClick}
+          />
+        )}
+
+        {(view === 'add' || view === 'edit') && (
+          <div className="max-w-3xl mx-auto">
+            <button
+              onClick={handleCancel}
+              className="flex items-center gap-2 text-stone-600 hover:text-gold transition-colors mb-6"
+            >
+              <IconArrowLeft size={20} />
+              <span>Cancel</span>
+            </button>
+            <div className="bg-white rounded-xl border border-stone-200 p-6 md:p-8">
+              <h2 className="font-display text-2xl font-semibold text-stone-800 mb-6">
+                {view === 'edit' ? 'Edit Object' : 'Add New Object'}
+              </h2>
+              <AdminForm
+                object={editingObject}
+                onSave={handleSave}
+                onCancel={handleCancel}
+                isSaving={isSaving}
+              />
+            </div>
           </div>
-        ) : (
-          <>
-            {view === 'dashboard' && <DashboardView initiatives={initiatives} />}
-            {view === 'list' && (
-              <InitiativesView
-                initiatives={initiatives}
-                onSelect={handleSelect}
-                onAdd={handleAdd}
-                onRefresh={() => loadData({ useCache: false })}
-                isLoading={isLoading}
-              />
-            )}
-            {isDetailReady && (
-              <InitiativeDetailView
-                initiative={selectedInitiative}
-                onBack={() => setView('list')}
-                onEdit={() => handleEdit(selectedInitiative)}
-                onSubmitUpdate={handleSubmitUpdate}
-                onReviewUpdate={handleReviewUpdate}
-              />
-            )}
-            {(view === 'add' || view === 'edit') && (
-              <div className="max-w-4xl mx-auto fade-up">
-                <button
-                  onClick={() => setView(editingInitiative ? 'detail' : 'list')}
-                  className="flex items-center gap-2 text-sm text-ocean mb-4"
-                >
-                  <IconBack size={18} /> Cancel
-                </button>
-                <InitiativeForm
-                  initiative={editingInitiative}
-                  onSave={handleSaveInitiative}
-                  onCancel={() => setView(editingInitiative ? 'detail' : 'list')}
-                  isSaving={isSaving}
-                />
-              </div>
-            )}
-          </>
         )}
       </main>
 
-      <footer className="mt-12 pb-10 text-center text-xs text-steel">
-        Built for shared accountability and board-level clarity.
+      {/* Footer */}
+      <footer className="bg-white border-t border-stone-200 mt-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center text-stone-500 text-sm">
+            <p>North Star House Archives</p>
+            <p className="mt-1">A Julia Morgan Historic Building</p>
+          </div>
+        </div>
       </footer>
     </div>
   );
@@ -1224,4 +1540,4 @@ const StrategyApp = () => {
 // ============================================================================
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<StrategyApp />);
+root.render(<ArchiveApp />);

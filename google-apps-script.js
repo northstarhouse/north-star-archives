@@ -1,5 +1,5 @@
 /**
- * Google Apps Script for North Star Strategic Plan Tracker
+ * Google Apps Script for North Star House Archives
  *
  * SETUP INSTRUCTIONS:
  * 1. Create a new Google Sheet (or use an existing one)
@@ -19,37 +19,39 @@
  *
  * SHEET STRUCTURE:
  * The script will automatically create the header row on first use.
- * Columns: id, title, pillar, description, owner, coChampions, status,
- *          progress, targetDate, successMetrics, notes, lastUpdateAt,
- *          updates, createdAt, updatedAt
+ * Columns: id, title, aboutText, images, from, designer, maker, makerRole,
+ *          portfolioTitle, mediumMaterials, measurements, keywords,
+ *          collection, objectType, objectNumber, createdAt, updatedAt
  */
 
 const USE_SHEETS = true;
-const SHEET_NAME = 'Strategic Plan';
-const IMAGE_FOLDER_ID = '';
-const IMAGE_FOLDER_NAME = 'North Star Strategic Plan Files';
+const SHEET_NAME = 'Archives';
+const IMAGE_FOLDER_ID = '1qcuRXPEICe9ZZNi4cWkcTNJAAL9cCxGz';
+const IMAGE_FOLDER_NAME = 'North Star Archives Images';
 
 // Column headers matching the object schema
 const HEADERS = [
   'id',
   'title',
-  'pillar',
-  'description',
-  'owner',
-  'coChampions',
-  'status',
-  'progress',
-  'targetDate',
-  'successMetrics',
-  'notes',
-  'lastUpdateAt',
-  'updates',
+  'aboutText',
+  'images',
+  'from',
+  'designer',
+  'maker',
+  'makerRole',
+  'portfolioTitle',
+  'mediumMaterials',
+  'measurements',
+  'keywords',
+  'collection',
+  'objectType',
+  'objectNumber',
   'createdAt',
   'updatedAt'
 ];
 
 /**
- * Get or create the Strategic Plan sheet
+ * Get or create the Archives sheet
  */
 function getSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -73,7 +75,7 @@ function getSheet() {
 }
 
 /**
- * Get or create the file upload folder in Drive
+ * Get or create the image folder in Drive
  */
 function getImageFolder() {
   if (IMAGE_FOLDER_ID) {
@@ -87,7 +89,7 @@ function getImageFolder() {
 }
 
 /**
- * Handle GET requests - fetch all initiatives
+ * Handle GET requests - fetch all objects
  */
 function doGet(e) {
   try {
@@ -160,7 +162,7 @@ function doPost(e) {
 }
 
 /**
- * Get all initiatives from the sheet
+ * Get all objects from the sheet
  */
 function getAllObjects() {
   const sheet = getSheet();
@@ -182,7 +184,7 @@ function getAllObjects() {
       let value = row[j];
 
       // Parse JSON fields
-      if (header === 'updates') {
+      if (header === 'images' || header === 'keywords') {
         try {
           value = value ? JSON.parse(value) : [];
         } catch (e) {
@@ -203,7 +205,7 @@ function getAllObjects() {
 }
 
 /**
- * Create a new initiative
+ * Create a new object
  */
 function createObject(obj) {
   const sheet = getSheet();
@@ -223,7 +225,7 @@ function createObject(obj) {
     const value = obj[header];
 
     // Stringify arrays
-    if (header === 'updates') {
+    if (header === 'images' || header === 'keywords') {
       return JSON.stringify(value || []);
     }
 
@@ -237,7 +239,7 @@ function createObject(obj) {
 }
 
 /**
- * Update an existing initiative
+ * Update an existing object
  */
 function updateObject(obj) {
   const sheet = getSheet();
@@ -265,7 +267,7 @@ function updateObject(obj) {
     const value = obj[header];
 
     // Stringify arrays
-    if (header === 'updates') {
+    if (header === 'images' || header === 'keywords') {
       return JSON.stringify(value || []);
     }
 
@@ -279,7 +281,7 @@ function updateObject(obj) {
 }
 
 /**
- * Delete an initiative by ID
+ * Delete an object by ID
  */
 function deleteObject(id) {
   const sheet = getSheet();
@@ -297,16 +299,16 @@ function deleteObject(id) {
 }
 
 /**
- * Upload a file to Drive and return its public URL
+ * Upload an image to Drive and return its public URL
  */
 function uploadImage(data) {
   if (!data || !data.data) {
-    throw new Error('Missing file data');
+    throw new Error('Missing image data');
   }
 
   const bytes = Utilities.base64Decode(data.data);
   const mimeType = data.mimeType || 'application/octet-stream';
-  const filename = data.filename || 'file';
+  const filename = data.filename || 'image';
   const blob = Utilities.newBlob(bytes, mimeType, filename);
   const folder = getImageFolder();
   const file = folder.createFile(blob);
@@ -324,32 +326,22 @@ function uploadImage(data) {
  * Test function - run this to verify the script works
  */
 function testScript() {
-  // Create a test initiative
+  // Create a test object
   const testObj = {
-    title: 'Expand board development program',
-    pillar: 'Governance',
-    description: 'Launch quarterly board training and recruitment pipeline.',
-    owner: 'Executive Director',
-    coChampions: 'Board Chair, Governance Committee',
-    status: 'On track',
-    progress: 45,
-    targetDate: '2026-06-30',
-    successMetrics: '100% board seat coverage, quarterly training cadence',
-    notes: 'Align with fundraising strategy',
-    updates: [
-      {
-        id: 'update-1',
-        date: new Date().toISOString(),
-        author: 'Board Chair',
-        summary: 'First training session scheduled',
-        details: 'Confirmed facilitation partner and agenda outline.',
-        blockers: '',
-        nextSteps: 'Finalize invitations',
-        progress: 45,
-        reviewStatus: 'Pending',
-        reviewNotes: ''
-      }
-    ]
+    title: 'Test Object',
+    aboutText: 'This is a test object',
+    images: [{ url: 'https://example.com/image.jpg', caption: 'Test image', isPrimary: true }],
+    from: 'Test Source',
+    designer: 'Test Designer',
+    maker: 'Test Maker',
+    makerRole: 'Builder',
+    portfolioTitle: 'Test Portfolio',
+    mediumMaterials: 'Test Materials',
+    measurements: '10" x 10"',
+    keywords: ['test', 'sample'],
+    collection: 'Test Collection',
+    objectType: 'Test Type',
+    objectNumber: 'TEST.001'
   };
 
   // Create
@@ -361,7 +353,7 @@ function testScript() {
   Logger.log('All objects: ' + JSON.stringify(all));
 
   // Update
-  created.title = 'Updated initiative';
+  created.title = 'Updated Test Object';
   const updated = updateObject(created);
   Logger.log('Updated: ' + JSON.stringify(updated));
 
