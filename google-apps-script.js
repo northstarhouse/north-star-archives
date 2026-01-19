@@ -54,9 +54,19 @@ const HEADERS = [
  * Get or create the Archives sheet
  */
 function getSheet() {
-  const ss = SHEET_ID
-    ? SpreadsheetApp.openById(SHEET_ID)
-    : SpreadsheetApp.getActiveSpreadsheet();
+  let ss = null;
+
+  if (SHEET_ID) {
+    try {
+      ss = SpreadsheetApp.openById(SHEET_ID);
+    } catch (error) {
+      Logger.log('openById failed, falling back to active spreadsheet: ' + error);
+    }
+  }
+
+  if (!ss) {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  }
   let sheet = ss.getSheetByName(SHEET_NAME);
 
   if (!sheet) {
