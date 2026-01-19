@@ -42,7 +42,9 @@ const writeCache = (objects) => {
 // 4. Deploy as Web App (Execute as: Me, Who has access: Anyone)
 // 5. Copy the Web App URL and paste it below
 
+const USE_SHEETS = false;
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwAGcXEtvH2joUHb0k1UxWSs8MYRqpUE-fn8wERcPxEQ9rK8hVGWcKnP7lpoWl7nNzM2A/exec';
+const DRIVE_SCRIPT_URL = GOOGLE_SCRIPT_URL;
 
 // ============================================================================
 // DROPDOWN OPTIONS
@@ -136,10 +138,10 @@ const SAMPLE_OBJECTS = [
 // ============================================================================
 
 const SheetsAPI = {
-  isConfigured: () => GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.length > 0,
+  isConfigured: () => USE_SHEETS && GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.length > 0,
 
-  postJson: async (payload) => {
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
+  postJson: async (url, payload) => {
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
@@ -150,6 +152,10 @@ const SheetsAPI = {
 
   // Fetch all objects from Google Sheets
   fetchAll: async () => {
+    if (!USE_SHEETS) {
+      const cached = readCache();
+      return cached?.objects || [];
+    }
     if (!SheetsAPI.isConfigured()) {
       console.log('Google Sheets not configured, using sample data');
       return SAMPLE_OBJECTS;
@@ -174,7 +180,7 @@ const SheetsAPI = {
     }
 
     try {
-      const data = await SheetsAPI.postJson({ action: 'create', object });
+      const data = await SheetsAPI.postJson(GOOGLE_SCRIPT_URL, { action: 'create', object });
       return data.result || { ...object, id: Date.now().toString() };
     } catch (error) {
       console.error('Error creating in Google Sheets:', error);
@@ -190,7 +196,7 @@ const SheetsAPI = {
     }
 
     try {
-      await SheetsAPI.postJson({ action: 'update', object });
+      await SheetsAPI.postJson(GOOGLE_SCRIPT_URL, { action: 'update', object });
       return object;
     } catch (error) {
       console.error('Error updating in Google Sheets:', error);
@@ -206,7 +212,7 @@ const SheetsAPI = {
     }
 
     try {
-      await SheetsAPI.postJson({ action: 'delete', id });
+      await SheetsAPI.postJson(GOOGLE_SCRIPT_URL, { action: 'delete', id });
       return true;
     } catch (error) {
       console.error('Error deleting from Google Sheets:', error);
@@ -216,8 +222,8 @@ const SheetsAPI = {
 
   // Upload an image file to Google Drive via Apps Script
   uploadImage: async ({ filename, mimeType, data }) => {
-    if (!SheetsAPI.isConfigured()) {
-      throw new Error('Google Sheets not configured');
+    if (!DRIVE_SCRIPT_URL) {
+      throw new Error('Drive upload not configured');
     }
 
     const payload = {
@@ -227,7 +233,7 @@ const SheetsAPI = {
       data
     };
 
-    const response = await SheetsAPI.postJson(payload);
+    const response = await SheetsAPI.postJson(DRIVE_SCRIPT_URL, payload);
     if (!response.success) throw new Error(response.error || 'Upload failed');
     return response.result;
   }
@@ -1337,6 +1343,14 @@ const ArchiveApp = () => {
   }, []);
 
   const loadData = async ({ useCache = true } = {}) => {
+    if (!USE_SHEETS) {
+      const cached = readCache();
+      setObjects(cached?.objects || []);
+      setIsConnected(false);
+      setIsLoading(false);
+      return;
+    }
+
     const cached = useCache ? readCache() : null;
     const isCacheFresh = cached && (Date.now() - cached.updatedAt) < CACHE_TTL_MS;
 
@@ -1394,11 +1408,19 @@ const ArchiveApp = () => {
     try {
       if (editingObject) {
         await SheetsAPI.update(savedObject);
-        setObjects(prev => prev.map(o => o.id === savedObject.id ? savedObject : o));
+        setObjects(prev => {
+          const next = prev.map(o => o.id === savedObject.id ? savedObject : o);
+          writeCache(next);
+          return next;
+        });
         setSelectedObject(savedObject);
       } else {
         const newObj = await SheetsAPI.create(savedObject);
-        setObjects(prev => [...prev, newObj]);
+        setObjects(prev => {
+          const next = [...prev, newObj];
+          writeCache(next);
+          return next;
+        });
         setSelectedObject(newObj);
       }
       setView('detail');

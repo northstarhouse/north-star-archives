@@ -24,6 +24,7 @@
  *          collection, objectType, objectNumber, createdAt, updatedAt
  */
 
+const USE_SHEETS = false;
 const SHEET_ID = '1qO5ZmBWJb0DqPRN_S2h7-7W9MhLdFg7ZGXluwvFWDYk';
 const USE_BOUND_SPREADSHEET = true;
 const SHEET_NAME = 'Archives';
@@ -110,6 +111,11 @@ function doGet(e) {
     const action = e.parameter.action;
 
     if (action === 'getAll') {
+      if (!USE_SHEETS) {
+        return ContentService
+          .createTextOutput(JSON.stringify({ success: true, objects: [] }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
       const objects = getAllObjects();
       return ContentService
         .createTextOutput(JSON.stringify({ success: true, objects: objects }))
@@ -139,12 +145,15 @@ function doPost(e) {
 
     switch (action) {
       case 'create':
+        if (!USE_SHEETS) throw new Error('Sheets disabled');
         result = createObject(data.object);
         break;
       case 'update':
+        if (!USE_SHEETS) throw new Error('Sheets disabled');
         result = updateObject(data.object);
         break;
       case 'delete':
+        if (!USE_SHEETS) throw new Error('Sheets disabled');
         result = deleteObject(data.id);
         break;
       case 'uploadImage':
