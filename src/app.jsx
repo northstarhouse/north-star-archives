@@ -1,7 +1,20 @@
-const { useState, useEffect, useMemo } = React;
+const { useState, useEffect, useMemo, useCallback } = React;
 
 // ============================================================================
-// SAMPLE DATA - North Star House / Julia Morgan themed objects
+// GOOGLE SHEETS CONFIGURATION
+// ============================================================================
+
+// Instructions to set up Google Sheets integration:
+// 1. Create a new Google Sheet
+// 2. Go to Extensions > Apps Script
+// 3. Paste the code from google-apps-script.js (included in this repo)
+// 4. Deploy as Web App (Execute as: Me, Who has access: Anyone)
+// 5. Copy the Web App URL and paste it below
+
+const GOOGLE_SCRIPT_URL = ''; // Paste your deployed Google Apps Script URL here
+
+// ============================================================================
+// DROPDOWN OPTIONS
 // ============================================================================
 
 const OBJECT_TYPES = [
@@ -42,15 +55,17 @@ const MAKER_ROLES = [
   'Contractor'
 ];
 
-const INITIAL_OBJECTS = [
+// ============================================================================
+// FALLBACK SAMPLE DATA (used when Google Sheets is not configured)
+// ============================================================================
+
+const SAMPLE_OBJECTS = [
   {
     id: '1',
     title: 'Original Redwood Ceiling Beam',
-    aboutText: 'This magnificent old-growth redwood beam is one of the original structural elements from the 1905 construction of the North Star House. Measuring over 20 feet in length, it showcases the exceptional craftsmanship and material quality that Julia Morgan specified for her buildings. The beam features hand-hewn surfaces and original iron hardware attachments, demonstrating the Arts and Crafts commitment to honest expression of materials and construction methods.',
+    aboutText: 'This magnificent old-growth redwood beam is one of the original structural elements from the 1905 construction of the North Star House.',
     images: [
-      { url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800', caption: 'Full beam view showing grain pattern', isPrimary: true },
-      { url: 'https://images.unsplash.com/photo-1541123603104-512919d6a96c?w=800', caption: 'Detail of iron hardware connection', isPrimary: false },
-      { url: 'https://images.unsplash.com/photo-1560185893-a55cbc8c57e8?w=800', caption: 'End grain showing old-growth rings', isPrimary: false }
+      { url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800', caption: 'Full beam view showing grain pattern', isPrimary: true }
     ],
     from: 'Original Construction',
     designer: 'Julia Morgan',
@@ -59,20 +74,17 @@ const INITIAL_OBJECTS = [
     portfolioTitle: 'North Star House - Structural Elements',
     mediumMaterials: 'Old-growth Redwood, Wrought Iron hardware',
     measurements: '20\' 6" L x 12" W x 14" H',
-    keywords: ['structural', 'original', 'redwood', '1900s', 'Arts & Crafts', 'ceiling', 'timber'],
+    keywords: ['structural', 'original', 'redwood', '1900s', 'Arts & Crafts'],
     collection: 'Building Materials',
     objectType: 'Architectural Element',
-    objectNumber: 'NSH.1905.001',
-    createdAt: '2024-01-15T10:00:00Z',
-    updatedAt: '2024-01-15T10:00:00Z'
+    objectNumber: 'NSH.1905.001'
   },
   {
     id: '2',
     title: 'Hammered Copper Lantern',
-    aboutText: 'A stunning example of Arts and Crafts metalwork, this hammered copper lantern was designed by Julia Morgan specifically for the North Star House entry. The hand-hammered texture creates a warm, dancing light pattern on surrounding walls. The lantern features amber art glass panels and original copper chain suspension hardware. This piece exemplifies Morgan\'s attention to every detail of her buildings, from structure to decorative elements.',
+    aboutText: 'A stunning example of Arts and Crafts metalwork, this hammered copper lantern was designed by Julia Morgan specifically for the North Star House entry.',
     images: [
-      { url: 'https://images.unsplash.com/photo-1524484485831-a92ffc0de03f?w=800', caption: 'Lantern illuminated at dusk', isPrimary: true },
-      { url: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=800', caption: 'Detail of hammered copper texture', isPrimary: false }
+      { url: 'https://images.unsplash.com/photo-1524484485831-a92ffc0de03f?w=800', caption: 'Lantern illuminated at dusk', isPrimary: true }
     ],
     from: 'Original Construction',
     designer: 'Julia Morgan',
@@ -81,142 +93,102 @@ const INITIAL_OBJECTS = [
     portfolioTitle: 'North Star House - Lighting Fixtures',
     mediumMaterials: 'Hammered Copper, Amber Art Glass, Brass fittings',
     measurements: '24" H x 14" Diameter',
-    keywords: ['lighting', 'Arts & Crafts', 'handcrafted', 'copper', 'entry', 'original', 'metalwork'],
+    keywords: ['lighting', 'Arts & Crafts', 'handcrafted', 'copper'],
     collection: 'Original Fixtures',
     objectType: 'Fixture',
-    objectNumber: 'NSH.1905.015',
-    createdAt: '2024-01-15T10:30:00Z',
-    updatedAt: '2024-01-15T10:30:00Z'
-  },
-  {
-    id: '3',
-    title: 'Original Construction Blueprint - Main Floor',
-    aboutText: 'This original blueprint from Julia Morgan\'s office shows the complete main floor plan of the North Star House as designed in 1904. The drawing includes detailed room layouts, structural notations in Morgan\'s distinctive hand, and material specifications. Blueprint annotations reveal last-minute design changes and the collaborative relationship between Morgan and her clients. This document is invaluable for understanding Morgan\'s design process and the original intent for the space.',
-    images: [
-      { url: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800', caption: 'Full blueprint showing main floor layout', isPrimary: true },
-      { url: 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800', caption: 'Detail of Morgan\'s handwritten notes', isPrimary: false }
-    ],
-    from: 'Cal Poly San Luis Obispo - Morgan Collection (Donated 1980)',
-    designer: 'Julia Morgan',
-    maker: 'Julia Morgan Office',
-    makerRole: 'Architect',
-    portfolioTitle: 'Morgan Drawing No. 12',
-    mediumMaterials: 'Paper, Blueprint (cyanotype)',
-    measurements: '36" x 48"',
-    keywords: ['plans', 'architecture', 'original', 'blueprint', 'Morgan', 'design', 'drawing'],
-    collection: 'Construction Documents',
-    objectType: 'Document',
-    objectNumber: 'NSH.DOC.1904.012',
-    createdAt: '2024-01-16T09:00:00Z',
-    updatedAt: '2024-01-16T09:00:00Z'
-  },
-  {
-    id: '4',
-    title: 'Hand-Forged Iron Door Hinge',
-    aboutText: 'This substantial hand-forged iron hinge is one of a matched set of six that support the main entry doors. Each hinge was individually crafted by a local blacksmith, featuring a decorative scroll terminal that echoes the organic forms favored in Arts and Crafts metalwork. The forging marks are intentionally visible, celebrating the handmade nature of the work. These hinges have supported the original oak doors for over a century.',
-    images: [
-      { url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800', caption: 'Hinge mounted on original door', isPrimary: true }
-    ],
-    from: 'Original Construction',
-    designer: 'Julia Morgan',
-    maker: 'Unknown Grass Valley Blacksmith',
-    makerRole: 'Craftsman',
-    portfolioTitle: 'North Star House - Hardware Collection',
-    mediumMaterials: 'Wrought Iron, hand-forged',
-    measurements: '18" L x 3" W',
-    keywords: ['hardware', 'handmade', 'iron', 'doors', 'blacksmith', 'entry', 'forged'],
-    collection: 'Original Fixtures',
-    objectType: 'Architectural Element',
-    objectNumber: 'NSH.1905.022',
-    createdAt: '2024-01-16T11:00:00Z',
-    updatedAt: '2024-01-16T11:00:00Z'
-  },
-  {
-    id: '5',
-    title: 'Construction Photograph - Workers on Scaffolding',
-    aboutText: 'This remarkable photograph captures construction workers on wooden scaffolding during the building of the North Star House in 1905. The image shows the west elevation partially complete, with workers visible at various levels of the structure. This photograph provides invaluable documentation of early 20th century construction methods and the scale of effort required to build Morgan\'s designs. Several workers are identifiable and their descendants remain in the Grass Valley community.',
-    images: [
-      { url: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800', caption: 'Workers on scaffolding, west elevation', isPrimary: true }
-    ],
-    from: 'Grass Valley Historical Society (Donated 1992)',
-    designer: '',
-    maker: 'Unknown Photographer',
-    makerRole: 'Photographer',
-    portfolioTitle: 'Building the North Star House, 1905',
-    mediumMaterials: 'Silver Gelatin Print, Glass Plate Negative',
-    measurements: '8" x 10" (original negative)',
-    keywords: ['construction', 'history', 'workers', '1900s', 'scaffolding', 'building', 'photograph'],
-    collection: 'Historic Photographs',
-    objectType: 'Photograph',
-    objectNumber: 'NSH.PHOTO.1905.003',
-    createdAt: '2024-01-17T14:00:00Z',
-    updatedAt: '2024-01-17T14:00:00Z'
-  },
-  {
-    id: '6',
-    title: 'Arts & Crafts Oak Sideboard',
-    aboutText: 'This quarter-sawn white oak sideboard was commissioned by the original owners specifically for the North Star House dining room. The piece features typical Arts and Crafts construction: exposed tenon joints, hammered copper hardware, and a simple, functional form. The back panel includes a beveled mirror flanked by small display shelves. The rich fumed oak finish has developed a beautiful patina over more than a century of use.',
-    images: [
-      { url: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800', caption: 'Sideboard in dining room setting', isPrimary: true },
-      { url: 'https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=800', caption: 'Detail of exposed joinery', isPrimary: false }
-    ],
-    from: 'Original Purchase by First Owners',
-    designer: 'Unknown',
-    maker: 'Sacramento Cabinet Works',
-    makerRole: 'Builder',
-    portfolioTitle: 'North Star House - Original Furnishings',
-    mediumMaterials: 'Quarter-sawn White Oak, Hammered Copper hardware, Beveled Mirror Glass',
-    measurements: '54" W x 22" D x 48" H',
-    keywords: ['furniture', 'dining', 'oak', 'Arts & Crafts', 'storage', 'original', 'sideboard'],
-    collection: 'Furnishings',
-    objectType: 'Furniture',
-    objectNumber: 'NSH.FURN.1906.001',
-    createdAt: '2024-01-18T10:00:00Z',
-    updatedAt: '2024-01-18T10:00:00Z'
-  },
-  {
-    id: '7',
-    title: 'Stained Glass Window Panel',
-    aboutText: 'This exceptional stained glass panel graces the main stairwell landing, depicting a California landscape with native oaks and rolling hills. The design uses opalescent glass in the American style, with rich greens, golds, and blues creating a luminous scene when backlit. The panel demonstrates the integration of nature themes throughout Morgan\'s designs, bringing the outdoors inside in a permanent, artistic form.',
-    images: [
-      { url: 'https://images.unsplash.com/photo-1551913902-c92207136625?w=800', caption: 'Window panel with afternoon light', isPrimary: true }
-    ],
-    from: 'Original Construction',
-    designer: 'Julia Morgan',
-    maker: 'Unknown San Francisco Glass Studio',
-    makerRole: 'Artisan',
-    portfolioTitle: 'North Star House - Decorative Glass',
-    mediumMaterials: 'Opalescent Glass, Lead Came, Copper Foil',
-    measurements: '36" W x 60" H',
-    keywords: ['glass', 'stained glass', 'window', 'nature', 'landscape', 'Arts & Crafts', 'decorative'],
-    collection: 'Original Fixtures',
-    objectType: 'Decorative Art',
-    objectNumber: 'NSH.1905.008',
-    createdAt: '2024-01-19T09:30:00Z',
-    updatedAt: '2024-01-19T09:30:00Z'
-  },
-  {
-    id: '8',
-    title: 'Granite Foundation Stone',
-    aboutText: 'This sample of local granite represents the foundation material used throughout the North Star House. Quarried from a site less than five miles from the building location, the stone exemplifies Julia Morgan\'s commitment to using local materials whenever possible. The granite\'s warm gray color with pink feldspar inclusions complements the redwood and copper used elsewhere in the building. This piece was salvaged during foundation repairs in 1998.',
-    images: [
-      { url: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=800', caption: 'Granite sample showing characteristic color', isPrimary: true }
-    ],
-    from: 'Salvaged during 1998 foundation repair',
-    designer: 'Julia Morgan',
-    maker: 'Local Grass Valley Quarry',
-    makerRole: 'Fabricator',
-    portfolioTitle: 'North Star House - Foundation Materials',
-    mediumMaterials: 'Granite with pink feldspar inclusions',
-    measurements: '12" x 8" x 6"',
-    keywords: ['stone', 'foundation', 'granite', 'local', 'structural', 'quarry', 'material'],
-    collection: 'Building Materials',
-    objectType: 'Building Material',
-    objectNumber: 'NSH.MAT.1998.001',
-    createdAt: '2024-01-20T11:00:00Z',
-    updatedAt: '2024-01-20T11:00:00Z'
+    objectNumber: 'NSH.1905.015'
   }
 ];
+
+// ============================================================================
+// GOOGLE SHEETS API FUNCTIONS
+// ============================================================================
+
+const SheetsAPI = {
+  isConfigured: () => GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.length > 0,
+
+  // Fetch all objects from Google Sheets
+  fetchAll: async () => {
+    if (!SheetsAPI.isConfigured()) {
+      console.log('Google Sheets not configured, using sample data');
+      return SAMPLE_OBJECTS;
+    }
+
+    try {
+      const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getAll`);
+      if (!response.ok) throw new Error('Failed to fetch data');
+      const data = await response.json();
+      return data.objects || [];
+    } catch (error) {
+      console.error('Error fetching from Google Sheets:', error);
+      return SAMPLE_OBJECTS;
+    }
+  },
+
+  // Save a new object to Google Sheets
+  create: async (object) => {
+    if (!SheetsAPI.isConfigured()) {
+      console.log('Google Sheets not configured, saving locally only');
+      return { ...object, id: Date.now().toString() };
+    }
+
+    try {
+      const response = await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors', // Required for Google Apps Script
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create', object })
+      });
+      // With no-cors, we can't read the response, so return the object with a timestamp ID
+      return { ...object, id: Date.now().toString() };
+    } catch (error) {
+      console.error('Error creating in Google Sheets:', error);
+      return { ...object, id: Date.now().toString() };
+    }
+  },
+
+  // Update an existing object in Google Sheets
+  update: async (object) => {
+    if (!SheetsAPI.isConfigured()) {
+      console.log('Google Sheets not configured, saving locally only');
+      return object;
+    }
+
+    try {
+      const response = await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update', object })
+      });
+      return object;
+    } catch (error) {
+      console.error('Error updating in Google Sheets:', error);
+      return object;
+    }
+  },
+
+  // Delete an object from Google Sheets
+  delete: async (id) => {
+    if (!SheetsAPI.isConfigured()) {
+      console.log('Google Sheets not configured');
+      return true;
+    }
+
+    try {
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', id })
+      });
+      return true;
+    } catch (error) {
+      console.error('Error deleting from Google Sheets:', error);
+      return false;
+    }
+  }
+};
 
 // ============================================================================
 // ICON COMPONENTS
@@ -287,6 +259,33 @@ const IconZoomIn = ({ size = 24 }) => (
   </svg>
 );
 
+const IconRefresh = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 4 23 10 17 10"></polyline>
+    <polyline points="1 20 1 14 7 14"></polyline>
+    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+  </svg>
+);
+
+const IconCloud = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
+  </svg>
+);
+
+const IconCheck = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12"></polyline>
+  </svg>
+);
+
+const IconLoader = ({ size = 24, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`animate-spin ${className}`}>
+    <circle cx="12" cy="12" r="10" strokeOpacity="0.25"></circle>
+    <path d="M12 2a10 10 0 0 1 10 10" strokeOpacity="1"></path>
+  </svg>
+);
+
 // ============================================================================
 // IMAGE GALLERY COMPONENT
 // ============================================================================
@@ -316,7 +315,6 @@ const ImageGallery = ({ images, title }) => {
   return (
     <>
       <div className="relative bg-stone-100 rounded-xl overflow-hidden">
-        {/* Main Image */}
         <div
           className="relative aspect-[4/3] cursor-zoom-in"
           onClick={() => setIsZoomed(true)}
@@ -334,7 +332,6 @@ const ImageGallery = ({ images, title }) => {
           </button>
         </div>
 
-        {/* Navigation Arrows */}
         {images.length > 1 && (
           <>
             <button
@@ -352,7 +349,6 @@ const ImageGallery = ({ images, title }) => {
           </>
         )}
 
-        {/* Caption */}
         {currentImage.caption && (
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 pt-8">
             <p className="text-white text-sm">{currentImage.caption}</p>
@@ -360,7 +356,6 @@ const ImageGallery = ({ images, title }) => {
         )}
       </div>
 
-      {/* Thumbnails */}
       {images.length > 1 && (
         <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
           {images.map((img, idx) => (
@@ -377,7 +372,6 @@ const ImageGallery = ({ images, title }) => {
         </div>
       )}
 
-      {/* Lightbox */}
       {isZoomed && (
         <div
           className="fixed inset-0 z-50 lightbox-overlay flex items-center justify-center p-4"
@@ -423,7 +417,7 @@ const ImageGallery = ({ images, title }) => {
 };
 
 // ============================================================================
-// METADATA GRID COMPONENT
+// METADATA COMPONENTS
 // ============================================================================
 
 const MetadataField = ({ label, value, onClick, isClickable = false }) => {
@@ -535,25 +529,14 @@ const RelatedObjects = ({ currentObject, allObjects, onObjectClick }) => {
       .filter(obj => obj.id !== currentObject.id)
       .map(obj => {
         let score = 0;
-
-        // Same collection: +3
         if (obj.collection === currentObject.collection) score += 3;
-
-        // Same object type: +2
         if (obj.objectType === currentObject.objectType) score += 2;
-
-        // Same designer: +2
         if (obj.designer && obj.designer === currentObject.designer) score += 2;
-
-        // Same maker: +2
         if (obj.maker && obj.maker === currentObject.maker) score += 2;
-
-        // Shared keywords: +1 each
         const sharedKeywords = obj.keywords?.filter(k =>
           currentObject.keywords?.includes(k)
         ) || [];
         score += sharedKeywords.length;
-
         return { ...obj, score };
       })
       .filter(obj => obj.score > 0)
@@ -659,7 +642,6 @@ const ImageInput = ({ images, onChange }) => {
 
   const removeImage = (idx) => {
     const newImages = images.filter((_, i) => i !== idx);
-    // Ensure at least one primary if images remain
     if (newImages.length > 0 && !newImages.some(img => img.isPrimary)) {
       newImages[0].isPrimary = true;
     }
@@ -726,7 +708,7 @@ const ImageInput = ({ images, onChange }) => {
 // ADMIN FORM COMPONENT
 // ============================================================================
 
-const AdminForm = ({ object, onSave, onCancel }) => {
+const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
   const [form, setForm] = useState({
     title: '',
     aboutText: '',
@@ -765,7 +747,7 @@ const AdminForm = ({ object, onSave, onCancel }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Images - First as specified */}
+      {/* Images */}
       <section>
         <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Images</h3>
         <p className="text-sm text-stone-500 mb-3">Add multiple images with zoom and carousel support</p>
@@ -775,7 +757,7 @@ const AdminForm = ({ object, onSave, onCancel }) => {
         />
       </section>
 
-      {/* From (Origin/Donor/Source) */}
+      {/* From */}
       <section>
         <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Origin Information</h3>
         <div>
@@ -786,13 +768,13 @@ const AdminForm = ({ object, onSave, onCancel }) => {
             type="text"
             value={form.from}
             onChange={(e) => updateField('from', e.target.value)}
-            placeholder="e.g., Original Construction, Donated by Smith Family, Purchased 1980"
+            placeholder="e.g., Original Construction, Donated by Smith Family"
             className="w-full px-4 py-3 border border-stone-300 rounded-lg"
           />
         </div>
       </section>
 
-      {/* Name / Title */}
+      {/* Basic Info */}
       <section>
         <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Basic Information</h3>
         <div className="space-y-4">
@@ -810,7 +792,6 @@ const AdminForm = ({ object, onSave, onCancel }) => {
           </div>
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-1">About this Object</label>
-            <p className="text-xs text-stone-500 mb-2">Short descriptive narrative</p>
             <textarea
               value={form.aboutText}
               onChange={(e) => updateField('aboutText', e.target.value)}
@@ -821,7 +802,7 @@ const AdminForm = ({ object, onSave, onCancel }) => {
         </div>
       </section>
 
-      {/* Makers and Designers */}
+      {/* Creators */}
       <section>
         <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Creators</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -901,7 +882,6 @@ const AdminForm = ({ object, onSave, onCancel }) => {
       {/* Keywords */}
       <section>
         <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Subject and Association Keywords</h3>
-        <p className="text-sm text-stone-500 mb-3">Tag-based, searchable keywords</p>
         <TagInput
           tags={form.keywords}
           onChange={(tags) => updateField('keywords', tags)}
@@ -941,7 +921,6 @@ const AdminForm = ({ object, onSave, onCancel }) => {
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-stone-700 mb-1">Object Number</label>
-            <p className="text-xs text-stone-500 mb-2">Unique identifier</p>
             <input
               type="text"
               value={form.objectNumber}
@@ -957,14 +936,26 @@ const AdminForm = ({ object, onSave, onCancel }) => {
       <div className="flex gap-4 pt-4 border-t border-stone-200">
         <button
           type="submit"
-          className="flex-1 bg-gold hover:bg-gold-dark text-white py-3 px-6 rounded-lg font-medium transition-colors"
+          disabled={isSaving}
+          className="flex-1 bg-gold hover:bg-gold-dark disabled:bg-stone-400 text-white py-3 px-6 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
         >
-          {object?.id ? 'Save Changes' : 'Add Object'}
+          {isSaving ? (
+            <>
+              <IconLoader size={20} />
+              Saving...
+            </>
+          ) : (
+            <>
+              <IconCloud size={20} />
+              {object?.id ? 'Save Changes' : 'Add Object'}
+            </>
+          )}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="px-6 py-3 bg-stone-100 hover:bg-stone-200 rounded-lg font-medium transition-colors"
+          disabled={isSaving}
+          className="px-6 py-3 bg-stone-100 hover:bg-stone-200 disabled:bg-stone-100 rounded-lg font-medium transition-colors"
         >
           Cancel
         </button>
@@ -980,7 +971,6 @@ const AdminForm = ({ object, onSave, onCancel }) => {
 const ObjectDetailView = ({ object, allObjects, onBack, onEdit, onFilterClick, onObjectClick }) => {
   return (
     <div className="max-w-4xl mx-auto">
-      {/* Back Button */}
       <button
         onClick={onBack}
         className="flex items-center gap-2 text-stone-600 hover:text-gold transition-colors mb-6"
@@ -989,10 +979,8 @@ const ObjectDetailView = ({ object, allObjects, onBack, onEdit, onFilterClick, o
         <span>Back to Collection</span>
       </button>
 
-      {/* Image Gallery */}
       <ImageGallery images={object.images} title={object.title} />
 
-      {/* Title Section */}
       <div className="mt-8 mb-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -1013,7 +1001,6 @@ const ObjectDetailView = ({ object, allObjects, onBack, onEdit, onFilterClick, o
         </div>
       </div>
 
-      {/* About Section */}
       {object.aboutText && (
         <div className="mb-8">
           <h2 className="font-display text-xl font-semibold text-stone-800 mb-3">About this Object</h2>
@@ -1021,10 +1008,8 @@ const ObjectDetailView = ({ object, allObjects, onBack, onEdit, onFilterClick, o
         </div>
       )}
 
-      {/* Metadata Grid */}
       <MetadataGrid object={object} onFilterClick={onFilterClick} />
 
-      {/* Keywords */}
       {object.keywords && object.keywords.length > 0 && (
         <div className="mt-6 pt-6 border-t border-stone-200">
           <h3 className="metadata-label mb-2">Subject & Association Keywords</h3>
@@ -1042,7 +1027,6 @@ const ObjectDetailView = ({ object, allObjects, onBack, onEdit, onFilterClick, o
         </div>
       )}
 
-      {/* Related Objects */}
       <RelatedObjects
         currentObject={object}
         allObjects={allObjects}
@@ -1056,17 +1040,14 @@ const ObjectDetailView = ({ object, allObjects, onBack, onEdit, onFilterClick, o
 // BROWSE VIEW
 // ============================================================================
 
-const BrowseView = ({ objects, filters, onFilterChange, onObjectClick, onAddNew }) => {
+const BrowseView = ({ objects, filters, onFilterChange, onObjectClick, onAddNew, onRefresh, isLoading, isConnected }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Get unique values for filter dropdowns
   const objectTypes = [...new Set(objects.map(o => o.objectType).filter(Boolean))];
   const collections = [...new Set(objects.map(o => o.collection).filter(Boolean))];
 
-  // Filter objects
   const filteredObjects = useMemo(() => {
     return objects.filter(obj => {
-      // Search query
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const searchableText = [
@@ -1080,25 +1061,13 @@ const BrowseView = ({ objects, filters, onFilterChange, onObjectClick, onAddNew 
           obj.portfolioTitle,
           ...(obj.keywords || [])
         ].join(' ').toLowerCase();
-
         if (!searchableText.includes(query)) return false;
       }
-
-      // Object type filter
       if (filters.objectType && obj.objectType !== filters.objectType) return false;
-
-      // Collection filter
       if (filters.collection && obj.collection !== filters.collection) return false;
-
-      // Keyword filter
       if (filters.keywords && !obj.keywords?.includes(filters.keywords)) return false;
-
-      // Designer filter
       if (filters.designer && obj.designer !== filters.designer) return false;
-
-      // Maker filter
       if (filters.maker && obj.maker !== filters.maker) return false;
-
       return true;
     });
   }, [objects, searchQuery, filters]);
@@ -1116,21 +1085,41 @@ const BrowseView = ({ objects, filters, onFilterChange, onObjectClick, onAddNew 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="font-display text-3xl md:text-4xl font-semibold text-stone-800">Archives</h1>
-          <p className="text-stone-600 mt-1">North Star House Collection</p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-stone-600">North Star House Collection</p>
+            {isConnected ? (
+              <span className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                <IconCheck size={12} /> Synced
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-xs text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full">
+                <IconCloud size={12} /> Local
+              </span>
+            )}
+          </div>
         </div>
-        <button
-          onClick={onAddNew}
-          className="flex items-center gap-2 bg-gold hover:bg-gold-dark text-white px-5 py-3 rounded-lg font-medium transition-colors"
-        >
-          <IconPlus size={20} />
-          Add Object
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={onRefresh}
+            disabled={isLoading}
+            className="flex items-center gap-2 px-4 py-3 bg-stone-100 hover:bg-stone-200 rounded-lg transition-colors"
+            title="Refresh from Google Sheets"
+          >
+            <IconRefresh size={20} className={isLoading ? 'animate-spin' : ''} />
+          </button>
+          <button
+            onClick={onAddNew}
+            className="flex items-center gap-2 bg-gold hover:bg-gold-dark text-white px-5 py-3 rounded-lg font-medium transition-colors"
+          >
+            <IconPlus size={20} />
+            Add Object
+          </button>
+        </div>
       </div>
 
       {/* Search and Filters */}
       <div className="bg-white rounded-xl border border-stone-200 p-4 mb-6">
         <div className="flex flex-col md:flex-row gap-4">
-          {/* Search */}
           <div className="flex-1 relative">
             <IconSearch size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
             <input
@@ -1141,8 +1130,6 @@ const BrowseView = ({ objects, filters, onFilterChange, onObjectClick, onAddNew 
               className="w-full pl-10 pr-4 py-3 border border-stone-300 rounded-lg"
             />
           </div>
-
-          {/* Type Filter */}
           <select
             value={filters.objectType || ''}
             onChange={(e) => onFilterChange({ ...filters, objectType: e.target.value || null })}
@@ -1153,8 +1140,6 @@ const BrowseView = ({ objects, filters, onFilterChange, onObjectClick, onAddNew 
               <option key={type} value={type}>{type}</option>
             ))}
           </select>
-
-          {/* Collection Filter */}
           <select
             value={filters.collection || ''}
             onChange={(e) => onFilterChange({ ...filters, collection: e.target.value || null })}
@@ -1167,93 +1152,74 @@ const BrowseView = ({ objects, filters, onFilterChange, onObjectClick, onAddNew 
           </select>
         </div>
 
-        {/* Active Filters */}
         {hasActiveFilters && (
           <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-stone-100">
             <span className="text-sm text-stone-500">Active filters:</span>
             {searchQuery && (
               <span className="tag tag-gold">
                 Search: "{searchQuery}"
-                <button onClick={() => setSearchQuery('')} className="ml-1">
-                  <IconX size={14} />
-                </button>
+                <button onClick={() => setSearchQuery('')} className="ml-1"><IconX size={14} /></button>
               </span>
             )}
             {filters.objectType && (
               <span className="tag tag-gold">
                 Type: {filters.objectType}
-                <button onClick={() => onFilterChange({ ...filters, objectType: null })} className="ml-1">
-                  <IconX size={14} />
-                </button>
+                <button onClick={() => onFilterChange({ ...filters, objectType: null })} className="ml-1"><IconX size={14} /></button>
               </span>
             )}
             {filters.collection && (
               <span className="tag tag-gold">
                 Collection: {filters.collection}
-                <button onClick={() => onFilterChange({ ...filters, collection: null })} className="ml-1">
-                  <IconX size={14} />
-                </button>
+                <button onClick={() => onFilterChange({ ...filters, collection: null })} className="ml-1"><IconX size={14} /></button>
               </span>
             )}
             {filters.keywords && (
               <span className="tag tag-gold">
                 Keyword: {filters.keywords}
-                <button onClick={() => onFilterChange({ ...filters, keywords: null })} className="ml-1">
-                  <IconX size={14} />
-                </button>
+                <button onClick={() => onFilterChange({ ...filters, keywords: null })} className="ml-1"><IconX size={14} /></button>
               </span>
             )}
             {filters.designer && (
               <span className="tag tag-gold">
                 Designer: {filters.designer}
-                <button onClick={() => onFilterChange({ ...filters, designer: null })} className="ml-1">
-                  <IconX size={14} />
-                </button>
+                <button onClick={() => onFilterChange({ ...filters, designer: null })} className="ml-1"><IconX size={14} /></button>
               </span>
             )}
             {filters.maker && (
               <span className="tag tag-gold">
                 Maker: {filters.maker}
-                <button onClick={() => onFilterChange({ ...filters, maker: null })} className="ml-1">
-                  <IconX size={14} />
-                </button>
+                <button onClick={() => onFilterChange({ ...filters, maker: null })} className="ml-1"><IconX size={14} /></button>
               </span>
             )}
-            <button
-              onClick={clearFilters}
-              className="text-sm text-gold hover:text-gold-dark ml-2"
-            >
+            <button onClick={clearFilters} className="text-sm text-gold hover:text-gold-dark ml-2">
               Clear all
             </button>
           </div>
         )}
       </div>
 
-      {/* Results Count */}
+      {/* Results */}
       <p className="text-stone-600 mb-4">
         {filteredObjects.length} {filteredObjects.length === 1 ? 'object' : 'objects'} found
       </p>
 
-      {/* Object Grid */}
-      {filteredObjects.length === 0 ? (
+      {isLoading ? (
+        <div className="text-center py-16 bg-white rounded-xl border border-stone-200">
+          <IconLoader size={48} className="mx-auto text-gold mb-4" />
+          <p className="text-stone-600 text-lg">Loading from Google Sheets...</p>
+        </div>
+      ) : filteredObjects.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-xl border border-stone-200">
           <IconGrid size={48} className="mx-auto text-stone-300 mb-4" />
           <p className="text-stone-600 text-lg">No objects match your search</p>
-          <button
-            onClick={clearFilters}
-            className="mt-4 text-gold hover:text-gold-dark"
-          >
+          <button onClick={clearFilters} className="mt-4 text-gold hover:text-gold-dark">
             Clear filters
           </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredObjects.map(obj => (
-            <ObjectCard
-              key={obj.id}
-              object={obj}
-              onClick={() => onObjectClick(obj)}
-            />
+            <ObjectCard key={obj.id} object={obj} onClick={() => onObjectClick(obj)} />
           ))}
         </div>
       )}
@@ -1266,11 +1232,32 @@ const BrowseView = ({ objects, filters, onFilterChange, onObjectClick, onAddNew 
 // ============================================================================
 
 const ArchiveApp = () => {
-  const [objects, setObjects] = useState(INITIAL_OBJECTS);
-  const [view, setView] = useState('browse'); // browse | detail | add | edit
+  const [objects, setObjects] = useState([]);
+  const [view, setView] = useState('browse');
   const [selectedObject, setSelectedObject] = useState(null);
   const [editingObject, setEditingObject] = useState(null);
   const [filters, setFilters] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+
+  // Load data on mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const data = await SheetsAPI.fetchAll();
+      setObjects(data);
+      setIsConnected(SheetsAPI.isConfigured());
+    } catch (error) {
+      console.error('Failed to load data:', error);
+      setObjects(SAMPLE_OBJECTS);
+    }
+    setIsLoading(false);
+  };
 
   const handleObjectClick = (obj) => {
     setSelectedObject(obj);
@@ -1295,18 +1282,25 @@ const ArchiveApp = () => {
     window.scrollTo(0, 0);
   };
 
-  const handleSave = (savedObject) => {
-    if (editingObject) {
-      // Update existing
-      setObjects(prev => prev.map(o => o.id === savedObject.id ? savedObject : o));
-      setSelectedObject(savedObject);
-    } else {
-      // Add new
-      setObjects(prev => [...prev, savedObject]);
-      setSelectedObject(savedObject);
+  const handleSave = async (savedObject) => {
+    setIsSaving(true);
+    try {
+      if (editingObject) {
+        await SheetsAPI.update(savedObject);
+        setObjects(prev => prev.map(o => o.id === savedObject.id ? savedObject : o));
+        setSelectedObject(savedObject);
+      } else {
+        const newObj = await SheetsAPI.create(savedObject);
+        setObjects(prev => [...prev, newObj]);
+        setSelectedObject(newObj);
+      }
+      setView('detail');
+      setEditingObject(null);
+    } catch (error) {
+      console.error('Failed to save:', error);
+      alert('Failed to save. Please try again.');
     }
-    setView('detail');
-    setEditingObject(null);
+    setIsSaving(false);
   };
 
   const handleCancel = () => {
@@ -1358,6 +1352,9 @@ const ArchiveApp = () => {
             onFilterChange={setFilters}
             onObjectClick={handleObjectClick}
             onAddNew={handleAddNew}
+            onRefresh={loadData}
+            isLoading={isLoading}
+            isConnected={isConnected}
           />
         )}
 
@@ -1389,6 +1386,7 @@ const ArchiveApp = () => {
                 object={editingObject}
                 onSave={handleSave}
                 onCancel={handleCancel}
+                isSaving={isSaving}
               />
             </div>
           </div>
