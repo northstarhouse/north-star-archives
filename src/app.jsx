@@ -42,7 +42,7 @@ const writeCache = (objects) => {
 // 4. Deploy as Web App (Execute as: Me, Who has access: Anyone)
 // 5. Copy the Web App URL and paste it below
 
-const USE_SHEETS = false;
+const USE_SHEETS = true;
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwAGcXEtvH2joUHb0k1UxWSs8MYRqpUE-fn8wERcPxEQ9rK8hVGWcKnP7lpoWl7nNzM2A/exec';
 const DRIVE_SCRIPT_URL = GOOGLE_SCRIPT_URL;
 

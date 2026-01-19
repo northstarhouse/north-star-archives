@@ -24,7 +24,7 @@
  *          collection, objectType, objectNumber, createdAt, updatedAt
  */
 
-const USE_SHEETS = false;
+const USE_SHEETS = true;
 const SHEET_ID = '1qO5ZmBWJb0DqPRN_S2h7-7W9MhLdFg7ZGXluwvFWDYk';
 const USE_BOUND_SPREADSHEET = true;
 const SHEET_NAME = 'Archives';
