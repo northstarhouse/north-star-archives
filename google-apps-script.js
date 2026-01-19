@@ -72,11 +72,17 @@ function getSheet() {
   let sheet = ss.getSheetByName(SHEET_NAME);
 
   if (!sheet) {
-    sheet = ss.insertSheet(SHEET_NAME);
-    // Add headers
-    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
-    sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
-    sheet.setFrozenRows(1);
+    const sheets = ss.getSheets();
+    if (sheets.length > 0) {
+      sheet = sheets[0];
+      Logger.log(`Sheet "${SHEET_NAME}" not found. Using first sheet: ${sheet.getName()}`);
+    } else {
+      sheet = ss.insertSheet(SHEET_NAME);
+      // Add headers
+      sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+      sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
+      sheet.setFrozenRows(1);
+    }
   }
 
   return sheet;
