@@ -877,7 +877,7 @@ const ImageInput = ({ images, onChange }) => {
         setUploadError('');
       } else {
         onChange([...images, { url: dataUrl, caption: caption.trim(), isPrimary, isLocal: true }]);
-        setUploadError('Saved locally (not synced to Drive).');
+        setUploadError('');
       }
       setCaption('');
     } catch (error) {
