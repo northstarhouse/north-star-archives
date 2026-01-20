@@ -30,7 +30,8 @@
 
 const USE_SHEETS = true;
 const SHEET_NAME = 'Archives';
-const IMAGE_FOLDER_ID = '1qcuRXPEICe9ZZNi4cWkcTNJAAL9cCxGz';
+const IMAGE_FOLDER_ID = '';
+const FORCE_MY_DRIVE = true;
 const IMAGE_FOLDER_NAME = 'North Star Archives Images';
 
 // Column headers matching the object schema
@@ -113,11 +114,12 @@ function getImageFolder() {
       Logger.log(`Invalid IMAGE_FOLDER_ID "${IMAGE_FOLDER_ID}": ${error}`);
     }
   }
-  const folders = DriveApp.getFoldersByName(IMAGE_FOLDER_NAME);
+  const folderSource = FORCE_MY_DRIVE ? DriveApp.getRootFolder() : DriveApp;
+  const folders = folderSource.getFoldersByName(IMAGE_FOLDER_NAME);
   if (folders.hasNext()) {
     return folders.next();
   }
-  return DriveApp.createFolder(IMAGE_FOLDER_NAME);
+  return folderSource.createFolder(IMAGE_FOLDER_NAME);
 }
 
 /**
