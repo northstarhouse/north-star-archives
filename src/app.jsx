@@ -5,6 +5,7 @@ const { useState, useEffect, useMemo, useCallback, useRef } = React;
 // =====================================================================
 
 const CACHE_KEY = 'nsh-archives-cache-v1';
+const IMAGE_CACHE_KEY = 'nsh-archives-images-v1';
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 const readCache = () => {
@@ -20,15 +21,74 @@ const readCache = () => {
   }
 };
 
+const isLocalImage = (image) => {
+  if (!image) return false;
+  if (image.isLocal) return true;
+  return typeof image.url === 'string' && image.url.startsWith('data:');
+};
+
+const stripLocalImagesFromObject = (object) => {
+  if (!object) return object;
+  const images = Array.isArray(object.images)
+    ? object.images.filter((img) => !isLocalImage(img))
+    : [];
+  return { ...object, images };
+};
+
+const stripLocalImagesFromObjects = (objects) => {
+  if (!Array.isArray(objects)) return objects;
+  return objects.map(stripLocalImagesFromObject);
+};
+
 const writeCache = (objects) => {
   try {
     localStorage.setItem(
       CACHE_KEY,
-      JSON.stringify({ objects, updatedAt: Date.now() })
+      JSON.stringify({ objects: stripLocalImagesFromObjects(objects), updatedAt: Date.now() })
     );
   } catch (error) {
     console.warn('Failed to write cache:', error);
   }
+};
+
+const readImageCache = () => {
+  try {
+    const raw = localStorage.getItem(IMAGE_CACHE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (error) {
+    console.warn('Failed to read image cache:', error);
+    return {};
+  }
+};
+
+const writeImageCache = (imagesById) => {
+  try {
+    localStorage.setItem(IMAGE_CACHE_KEY, JSON.stringify(imagesById || {}));
+  } catch (error) {
+    console.warn('Failed to write image cache:', error);
+  }
+};
+
+const normalizeImages = (images) => {
+  if (!Array.isArray(images) || images.length === 0) return images;
+  if (!images.some((img) => img.isPrimary)) {
+    const first = { ...images[0], isPrimary: true };
+    return [first, ...images.slice(1)];
+  }
+  return images;
+};
+
+const mergeLocalImages = (objects) => {
+  if (!Array.isArray(objects) || objects.length === 0) return objects;
+  const localImages = readImageCache();
+  return objects.map((object) => {
+    const local = localImages[object.id];
+    if (!Array.isArray(local) || local.length === 0) return object;
+    const merged = normalizeImages([...(object.images || []), ...local]);
+    return { ...object, images: merged };
+  });
 };
 
 // ============================================================================
@@ -712,15 +772,28 @@ const ImageInput = ({ images, onChange }) => {
       const dataUrl = await readAsDataUrl(file);
       const base64 = dataUrl.split(',')[1] || '';
       if (!base64) throw new Error('Invalid image data');
-
-      const result = await SheetsAPI.uploadImage({
-        filename: file.name,
-        mimeType: file.type,
-        data: base64
-      });
+      let uploadedUrl = null;
+      try {
+        if (SheetsAPI.isConfigured()) {
+          const result = await SheetsAPI.uploadImage({
+            filename: file.name,
+            mimeType: file.type,
+            data: base64
+          });
+          uploadedUrl = result?.url || null;
+        }
+      } catch (error) {
+        console.error('Image upload failed:', error);
+      }
 
       const isPrimary = images.length === 0;
-      onChange([...images, { url: result.url, caption: caption.trim(), isPrimary }]);
+      if (uploadedUrl) {
+        onChange([...images, { url: uploadedUrl, caption: caption.trim(), isPrimary }]);
+        setUploadError('');
+      } else {
+        onChange([...images, { url: dataUrl, caption: caption.trim(), isPrimary, isLocal: true }]);
+        setUploadError('Saved locally (not synced to Drive).');
+      }
       setCaption('');
     } catch (error) {
       console.error('Image upload failed:', error);
@@ -1345,7 +1418,7 @@ const ArchiveApp = () => {
   const loadData = async ({ useCache = true } = {}) => {
     if (!USE_SHEETS) {
       const cached = readCache();
-      setObjects(cached?.objects || []);
+      setObjects(mergeLocalImages(cached?.objects || []));
       setIsConnected(false);
       setIsLoading(false);
       return;
@@ -1355,7 +1428,7 @@ const ArchiveApp = () => {
     const isCacheFresh = cached && (Date.now() - cached.updatedAt) < CACHE_TTL_MS;
 
     if (cached?.objects?.length) {
-      setObjects(cached.objects);
+      setObjects(mergeLocalImages(cached.objects));
       setIsConnected(SheetsAPI.isConfigured());
       setIsLoading(false);
     } else {
@@ -1367,13 +1440,13 @@ const ArchiveApp = () => {
         // Still refresh in the background for latest changes.
       }
       const data = await SheetsAPI.fetchAll();
-      setObjects(data);
+      setObjects(mergeLocalImages(data));
       setIsConnected(SheetsAPI.isConfigured());
       writeCache(data);
     } catch (error) {
       console.error('Failed to load data:', error);
       if (!cached?.objects?.length) {
-        setObjects(SAMPLE_OBJECTS);
+        setObjects(mergeLocalImages(SAMPLE_OBJECTS));
       }
     }
 
@@ -1406,8 +1479,11 @@ const ArchiveApp = () => {
   const handleSave = async (savedObject) => {
     setIsSaving(true);
     try {
+      const localImages = (savedObject.images || []).filter(isLocalImage);
+      const sheetObject = stripLocalImagesFromObject(savedObject);
+      let finalObject = savedObject;
       if (editingObject) {
-        await SheetsAPI.update(savedObject);
+        await SheetsAPI.update(sheetObject);
         setObjects(prev => {
           const next = prev.map(o => o.id === savedObject.id ? savedObject : o);
           writeCache(next);
@@ -1415,13 +1491,24 @@ const ArchiveApp = () => {
         });
         setSelectedObject(savedObject);
       } else {
-        const newObj = await SheetsAPI.create(savedObject);
+        const newObj = await SheetsAPI.create(sheetObject);
+        const nextObject = { ...savedObject, id: newObj.id || savedObject.id };
+        finalObject = nextObject;
         setObjects(prev => {
-          const next = [...prev, newObj];
+          const next = [...prev, nextObject];
           writeCache(next);
           return next;
         });
-        setSelectedObject(newObj);
+        setSelectedObject(nextObject);
+      }
+      if (finalObject.id) {
+        const imageCache = readImageCache();
+        if (localImages.length > 0) {
+          imageCache[finalObject.id] = localImages;
+        } else {
+          delete imageCache[finalObject.id];
+        }
+        writeImageCache(imageCache);
       }
       setView('detail');
       setEditingObject(null);
