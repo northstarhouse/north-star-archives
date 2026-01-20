@@ -103,7 +103,7 @@ const mergeLocalImages = (objects) => {
 // 5. Copy the Web App URL and paste it below
 
 const USE_SHEETS = true;
-const USE_DRIVE_UPLOADS = false;
+const USE_DRIVE_UPLOADS = true;
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwAGcXEtvH2joUHb0k1UxWSs8MYRqpUE-fn8wERcPxEQ9rK8hVGWcKnP7lpoWl7nNzM2A/exec';
 const DRIVE_SCRIPT_URL = GOOGLE_SCRIPT_URL;
 

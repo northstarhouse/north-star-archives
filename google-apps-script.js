@@ -348,7 +348,12 @@ function uploadImage(data) {
   try {
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   } catch (error) {
-    Logger.log(`Failed to set sharing for ${file.getId()}: ${error}`);
+    Logger.log(`Failed to set link sharing for ${file.getId()}: ${error}`);
+    try {
+      file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
+    } catch (fallbackError) {
+      Logger.log(`Failed to set public sharing for ${file.getId()}: ${fallbackError}`);
+    }
   }
 
   return {
