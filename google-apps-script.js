@@ -21,7 +21,11 @@
  * The script will automatically create the header row on first use.
  * Columns: id, title, aboutText, images, from, designer, maker, makerRole,
  *          portfolioTitle, mediumMaterials, measurements, keywords,
- *          collection, objectType, objectNumber, createdAt, updatedAt
+ *          collection, objectType, objectNumber, accessionDate,
+ *          controllingInstitution, collectionType, classification,
+ *          physicalCharacteristics, cataloguedDate, cataloguer,
+ *          relatedAcquisitionRecord, acquisitionNotes, parts,
+ *          createdAt, updatedAt
  */
 
 const USE_SHEETS = true;
@@ -46,6 +50,16 @@ const HEADERS = [
   'collection',
   'objectType',
   'objectNumber',
+  'accessionDate',
+  'controllingInstitution',
+  'collectionType',
+  'classification',
+  'physicalCharacteristics',
+  'cataloguedDate',
+  'cataloguer',
+  'relatedAcquisitionRecord',
+  'acquisitionNotes',
+  'parts',
   'createdAt',
   'updatedAt'
 ];
@@ -69,6 +83,20 @@ function getSheet() {
       sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
       sheet.setFrozenRows(1);
     }
+  }
+
+  try {
+    const headerRange = sheet.getRange(1, 1, 1, HEADERS.length);
+    const existing = headerRange.getValues()[0];
+    const needsUpdate = existing.length < HEADERS.length
+      || HEADERS.some((header, index) => existing[index] !== header);
+    if (needsUpdate) {
+      headerRange.setValues([HEADERS]);
+      headerRange.setFontWeight('bold');
+      sheet.setFrozenRows(1);
+    }
+  } catch (error) {
+    Logger.log(`Failed to validate headers: ${error}`);
   }
 
   return sheet;
@@ -188,7 +216,7 @@ function getAllObjects() {
       let value = row[j];
 
       // Parse JSON fields
-      if (header === 'images' || header === 'keywords') {
+      if (header === 'images' || header === 'keywords' || header === 'parts') {
         try {
           value = value ? JSON.parse(value) : [];
         } catch (e) {
@@ -229,7 +257,7 @@ function createObject(obj) {
     const value = obj[header];
 
     // Stringify arrays
-    if (header === 'images' || header === 'keywords') {
+    if (header === 'images' || header === 'keywords' || header === 'parts') {
       return JSON.stringify(value || []);
     }
 
@@ -271,7 +299,7 @@ function updateObject(obj) {
     const value = obj[header];
 
     // Stringify arrays
-    if (header === 'images' || header === 'keywords') {
+    if (header === 'images' || header === 'keywords' || header === 'parts') {
       return JSON.stringify(value || []);
     }
 

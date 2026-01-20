@@ -573,15 +573,20 @@ const MetadataGrid = ({ object, onFilterClick }) => {
         onClick={() => onFilterClick('objectType', object.objectType)}
       />
       <MetadataField label="Object Number" value={object.objectNumber} />
+      <MetadataField label="Accession Date" value={object.accessionDate} />
       <MetadataField
         label="Named Collection"
         value={object.collection}
         isClickable
         onClick={() => onFilterClick('collection', object.collection)}
       />
+      <MetadataField label="Collection Type" value={object.collectionType} />
+      <MetadataField label="Classification" value={object.classification} />
+      <MetadataField label="Controlling Institution" value={object.controllingInstitution} />
       <MetadataField label="Portfolio Title" value={object.portfolioTitle} />
       <MetadataField label="Medium & Materials" value={object.mediumMaterials} />
       <MetadataField label="Measurements" value={object.measurements} />
+      <MetadataField label="Physical Characteristics" value={object.physicalCharacteristics} />
       <MetadataField
         label="Designer"
         value={object.designer}
@@ -596,6 +601,10 @@ const MetadataGrid = ({ object, onFilterClick }) => {
       />
       <MetadataField label="Maker Role" value={object.makerRole} />
       <MetadataField label="From (Origin/Donor/Source)" value={object.from} />
+      <MetadataField label="Catalogued Date" value={object.cataloguedDate} />
+      <MetadataField label="Cataloguer" value={object.cataloguer} />
+      <MetadataField label="Related Acquisition Record" value={object.relatedAcquisitionRecord} />
+      <MetadataField label="Acquisition Notes" value={object.acquisitionNotes} />
     </div>
   );
 };
@@ -742,6 +751,67 @@ const TagInput = ({ tags, onChange, placeholder = "Add tag..." }) => {
           <IconPlus size={18} />
         </button>
       </div>
+    </div>
+  );
+};
+
+const PartsInput = ({ parts, onChange }) => {
+  const [partId, setPartId] = useState('');
+  const [partDescription, setPartDescription] = useState('');
+
+  const addPart = () => {
+    const trimmedId = partId.trim();
+    const trimmedDesc = partDescription.trim();
+    if (!trimmedId && !trimmedDesc) return;
+    onChange([...(parts || []), { partId: trimmedId, partDescription: trimmedDesc }]);
+    setPartId('');
+    setPartDescription('');
+  };
+
+  const removePart = (idx) => {
+    onChange((parts || []).filter((_, i) => i !== idx));
+  };
+
+  return (
+    <div className="space-y-2">
+      {(parts || []).map((part, idx) => (
+        <div key={idx} className="flex items-start gap-3 bg-stone-50 p-3 rounded-lg">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-stone-700 truncate">{part.partId || 'Part ID'}</p>
+            <p className="text-xs text-stone-500">{part.partDescription || 'Part description'}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => removePart(idx)}
+            className="text-stone-400 hover:text-red-600"
+          >
+            <IconX size={18} />
+          </button>
+        </div>
+      ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <input
+          type="text"
+          value={partId}
+          onChange={(e) => setPartId(e.target.value)}
+          placeholder="Part ID Number"
+          className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
+        />
+        <input
+          type="text"
+          value={partDescription}
+          onChange={(e) => setPartDescription(e.target.value)}
+          placeholder="Part Description"
+          className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
+        />
+      </div>
+      <button
+        type="button"
+        onClick={addPart}
+        className="px-3 py-2 bg-stone-100 hover:bg-stone-200 rounded-lg transition-colors text-sm"
+      >
+        Add Part
+      </button>
     </div>
   );
 };
@@ -897,6 +967,16 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
     collection: '',
     objectType: '',
     objectNumber: '',
+    accessionDate: '',
+    controllingInstitution: '',
+    collectionType: '',
+    classification: '',
+    physicalCharacteristics: '',
+    cataloguedDate: '',
+    cataloguer: '',
+    relatedAcquisitionRecord: '',
+    acquisitionNotes: '',
+    parts: [],
     ...object
   });
 
@@ -944,6 +1024,28 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
             placeholder="e.g., Original Construction, Donated by Smith Family"
             className="w-full px-4 py-3 border border-stone-300 rounded-lg"
           />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Accession Date</label>
+            <input
+              type="text"
+              value={form.accessionDate}
+              onChange={(e) => updateField('accessionDate', e.target.value)}
+              placeholder="e.g., 07/25/2025"
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Controlling Institution</label>
+            <input
+              type="text"
+              value={form.controllingInstitution}
+              onChange={(e) => updateField('controllingInstitution', e.target.value)}
+              placeholder="e.g., North Star House"
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+            />
+          </div>
         </div>
       </section>
 
@@ -1050,6 +1152,16 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
             />
           </div>
         </div>
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-stone-700 mb-1">Physical Characteristics</label>
+          <input
+            type="text"
+            value={form.physicalCharacteristics}
+            onChange={(e) => updateField('physicalCharacteristics', e.target.value)}
+            placeholder="e.g., dark blue flower pattern on white porcelain"
+            className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+          />
+        </div>
       </section>
 
       {/* Keywords */}
@@ -1092,6 +1204,26 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
               ))}
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Collection Type</label>
+            <input
+              type="text"
+              value={form.collectionType}
+              onChange={(e) => updateField('collectionType', e.target.value)}
+              placeholder="e.g., Decorative furnishings"
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Classification</label>
+            <input
+              type="text"
+              value={form.classification}
+              onChange={(e) => updateField('classification', e.target.value)}
+              placeholder="e.g., Salad Plates"
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+            />
+          </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-stone-700 mb-1">Object Number</label>
             <input
@@ -1102,6 +1234,57 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
               className="w-full px-4 py-3 border border-stone-300 rounded-lg"
             />
           </div>
+        </div>
+      </section>
+
+      <section>
+        <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Parts</h3>
+        <PartsInput parts={form.parts} onChange={(parts) => updateField('parts', parts)} />
+      </section>
+
+      <section>
+        <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Cataloging</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Catalogued Date</label>
+            <input
+              type="text"
+              value={form.cataloguedDate}
+              onChange={(e) => updateField('cataloguedDate', e.target.value)}
+              placeholder="e.g., 09/01/2025"
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Cataloguer</label>
+            <input
+              type="text"
+              value={form.cataloguer}
+              onChange={(e) => updateField('cataloguer', e.target.value)}
+              placeholder="e.g., Carola Davis"
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+            />
+          </div>
+        </div>
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-stone-700 mb-1">Related Acquisition Record</label>
+          <textarea
+            value={form.relatedAcquisitionRecord}
+            onChange={(e) => updateField('relatedAcquisitionRecord', e.target.value)}
+            placeholder="e.g., 2025.001.01; Acquired; Lois Hensel; Gift with conditions; 07/25/2025"
+            className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+            rows={2}
+          />
+        </div>
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-stone-700 mb-1">Acquisition Notes</label>
+          <textarea
+            value={form.acquisitionNotes}
+            onChange={(e) => updateField('acquisitionNotes', e.target.value)}
+            placeholder="e.g., Donor requests items be returned if administration changes"
+            className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+            rows={2}
+          />
         </div>
       </section>
 
@@ -1182,6 +1365,24 @@ const ObjectDetailView = ({ object, allObjects, onBack, onEdit, onFilterClick, o
       )}
 
       <MetadataGrid object={object} onFilterClick={onFilterClick} />
+
+      {object.parts && object.parts.length > 0 && (
+        <div className="mt-6 pt-6 border-t border-stone-200">
+          <h3 className="metadata-label mb-2">Parts</h3>
+          <div className="space-y-2">
+            {object.parts.map((part, idx) => (
+              <div key={idx} className="bg-stone-50 border border-stone-200 rounded-lg px-3 py-2">
+                <div className="text-sm font-medium text-stone-700">
+                  {part.partId || 'Part ID'}
+                </div>
+                {part.partDescription && (
+                  <div className="text-xs text-stone-500">{part.partDescription}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {object.keywords && object.keywords.length > 0 && (
         <div className="mt-6 pt-6 border-t border-stone-200">
