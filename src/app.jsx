@@ -842,6 +842,19 @@ const ImageInput = ({ images, onChange }) => {
     return type === 'image/heic' || type === 'image/heif' || name.endsWith('.heic') || name.endsWith('.heif');
   };
 
+  const convertHeicToJpeg = async (file) => {
+    if (typeof window === 'undefined' || typeof window.heic2any !== 'function') {
+      throw new Error('HEIC conversion not available.');
+    }
+    const blob = await window.heic2any({
+      blob: file,
+      toType: 'image/jpeg',
+      quality: 0.9
+    });
+    const name = (file.name || 'image').replace(/\.(heic|heif)$/i, '.jpg');
+    return new File([blob], name, { type: 'image/jpeg' });
+  };
+
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -850,19 +863,16 @@ const ImageInput = ({ images, onChange }) => {
     setUploadError('');
 
     try {
-      if (isHeicFile(file)) {
-        setUploadError('HEIC images are not supported. Please convert to JPG/PNG or enable "Most Compatible" in iPhone camera settings.');
-        return;
-      }
-      const dataUrl = await readAsDataUrl(file);
+      const sourceFile = isHeicFile(file) ? await convertHeicToJpeg(file) : file;
+      const dataUrl = await readAsDataUrl(sourceFile);
       const base64 = dataUrl.split(',')[1] || '';
       if (!base64) throw new Error('Invalid image data');
       let uploadedUrl = null;
       if (USE_DRIVE_UPLOADS && SheetsAPI.isConfigured()) {
         try {
           const result = await SheetsAPI.uploadImage({
-            filename: file.name,
-            mimeType: file.type,
+            filename: sourceFile.name,
+            mimeType: sourceFile.type,
             data: base64
           });
           uploadedUrl = result?.url || null;
