@@ -835,6 +835,13 @@ const ImageInput = ({ images, onChange }) => {
     })
   );
 
+  const isHeicFile = (file) => {
+    if (!file) return false;
+    const type = (file.type || '').toLowerCase();
+    const name = (file.name || '').toLowerCase();
+    return type === 'image/heic' || type === 'image/heif' || name.endsWith('.heic') || name.endsWith('.heif');
+  };
+
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -843,6 +850,10 @@ const ImageInput = ({ images, onChange }) => {
     setUploadError('');
 
     try {
+      if (isHeicFile(file)) {
+        setUploadError('HEIC images are not supported. Please convert to JPG/PNG or enable "Most Compatible" in iPhone camera settings.');
+        return;
+      }
       const dataUrl = await readAsDataUrl(file);
       const base64 = dataUrl.split(',')[1] || '';
       if (!base64) throw new Error('Invalid image data');
