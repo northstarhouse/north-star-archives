@@ -79,7 +79,11 @@ function getSheet() {
  */
 function getImageFolder() {
   if (IMAGE_FOLDER_ID) {
-    return DriveApp.getFolderById(IMAGE_FOLDER_ID);
+    try {
+      return DriveApp.getFolderById(IMAGE_FOLDER_ID);
+    } catch (error) {
+      Logger.log(`Invalid IMAGE_FOLDER_ID "${IMAGE_FOLDER_ID}": ${error}`);
+    }
   }
   const folders = DriveApp.getFoldersByName(IMAGE_FOLDER_NAME);
   if (folders.hasNext()) {
@@ -313,7 +317,11 @@ function uploadImage(data) {
   const folder = getImageFolder();
   const file = folder.createFile(blob);
 
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  try {
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (error) {
+    Logger.log(`Failed to set sharing for ${file.getId()}: ${error}`);
+  }
 
   return {
     id: file.getId(),
