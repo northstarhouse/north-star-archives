@@ -724,7 +724,7 @@ const ImageInput = ({ images, onChange }) => {
       setCaption('');
     } catch (error) {
       console.error('Image upload failed:', error);
-      setUploadError('Upload failed. Please try again.');
+      setUploadError(error?.message || 'Upload failed. Please try again.');
     } finally {
       setIsUploading(false);
       e.target.value = '';
