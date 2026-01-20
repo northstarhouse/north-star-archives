@@ -32,7 +32,7 @@ const USE_SHEETS = true;
 const SHEET_NAME = 'Archives';
 const IMAGE_FOLDER_ID = '';
 const FORCE_MY_DRIVE = true;
-const IMAGE_FOLDER_NAME = 'North Star Archives Images';
+const IMAGE_FOLDER_NAME = 'Archival Photos';
 
 // Column headers matching the object schema
 const HEADERS = [
