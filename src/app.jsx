@@ -103,6 +103,7 @@ const mergeLocalImages = (objects) => {
 // 5. Copy the Web App URL and paste it below
 
 const USE_SHEETS = true;
+const USE_DRIVE_UPLOADS = false;
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwAGcXEtvH2joUHb0k1UxWSs8MYRqpUE-fn8wERcPxEQ9rK8hVGWcKnP7lpoWl7nNzM2A/exec';
 const DRIVE_SCRIPT_URL = GOOGLE_SCRIPT_URL;
 
@@ -282,6 +283,9 @@ const SheetsAPI = {
 
   // Upload an image file to Google Drive via Apps Script
   uploadImage: async ({ filename, mimeType, data }) => {
+    if (!USE_DRIVE_UPLOADS) {
+      throw new Error('Drive uploads disabled');
+    }
     if (!DRIVE_SCRIPT_URL) {
       throw new Error('Drive upload not configured');
     }
@@ -773,17 +777,17 @@ const ImageInput = ({ images, onChange }) => {
       const base64 = dataUrl.split(',')[1] || '';
       if (!base64) throw new Error('Invalid image data');
       let uploadedUrl = null;
-      try {
-        if (SheetsAPI.isConfigured()) {
+      if (USE_DRIVE_UPLOADS && SheetsAPI.isConfigured()) {
+        try {
           const result = await SheetsAPI.uploadImage({
             filename: file.name,
             mimeType: file.type,
             data: base64
           });
           uploadedUrl = result?.url || null;
+        } catch (error) {
+          console.error('Image upload failed:', error);
         }
-      } catch (error) {
-        console.error('Image upload failed:', error);
       }
 
       const isPrimary = images.length === 0;
