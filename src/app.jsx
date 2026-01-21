@@ -27,6 +27,65 @@ const isLocalImage = (image) => {
   return typeof image.url === 'string' && image.url.startsWith('data:');
 };
 
+const mimeToExtension = (mimeType) => {
+  if (!mimeType) return 'jpg';
+  if (mimeType.includes('png')) return 'png';
+  if (mimeType.includes('webp')) return 'webp';
+  if (mimeType.includes('gif')) return 'gif';
+  return 'jpg';
+};
+
+const parseDataUrl = (dataUrl) => {
+  const match = typeof dataUrl === 'string'
+    ? dataUrl.match(/^data:([^;]+);base64,(.+)$/)
+    : null;
+  if (!match) return null;
+  return { mimeType: match[1], data: match[2] };
+};
+
+const uploadLocalImagesToDrive = async (images) => {
+  if (!Array.isArray(images) || images.length === 0) {
+    return { images, failed: false };
+  }
+  let failed = false;
+  const timestamp = Date.now();
+  const uploadedImages = [];
+
+  for (let i = 0; i < images.length; i += 1) {
+    const image = images[i];
+    if (!isLocalImage(image)) {
+      uploadedImages.push(image);
+      continue;
+    }
+    const parsed = parseDataUrl(image.url);
+    if (!parsed) {
+      failed = true;
+      uploadedImages.push(image);
+      continue;
+    }
+    try {
+      const ext = mimeToExtension(parsed.mimeType);
+      const filename = `image-${timestamp}-${i + 1}.${ext}`;
+      const result = await SheetsAPI.uploadImage({
+        filename,
+        mimeType: parsed.mimeType,
+        data: parsed.data
+      });
+      uploadedImages.push({
+        ...image,
+        url: result.url,
+        isLocal: false
+      });
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      failed = true;
+      uploadedImages.push(image);
+    }
+  }
+
+  return { images: uploadedImages, failed };
+};
+
 const stripLocalImagesFromObject = (object) => {
   if (!object) return object;
   const images = Array.isArray(object.images)
@@ -1705,20 +1764,27 @@ const ArchiveApp = () => {
   const handleSave = async (savedObject) => {
     setIsSaving(true);
     try {
-      const localImages = (savedObject.images || []).filter(isLocalImage);
-      const sheetObject = stripLocalImagesFromObject(savedObject);
       let finalObject = savedObject;
+      if (USE_DRIVE_UPLOADS && SheetsAPI.isConfigured()) {
+        const uploadResult = await uploadLocalImagesToDrive(savedObject.images || []);
+        finalObject = { ...savedObject, images: uploadResult.images };
+        if (uploadResult.failed) {
+          alert('Some images could not be uploaded to Drive. Please try saving again.');
+        }
+      }
+      const localImages = (finalObject.images || []).filter(isLocalImage);
+      const sheetObject = stripLocalImagesFromObject(finalObject);
       if (editingObject) {
         await SheetsAPI.update(sheetObject);
         setObjects(prev => {
-          const next = prev.map(o => o.id === savedObject.id ? savedObject : o);
+          const next = prev.map(o => o.id === finalObject.id ? finalObject : o);
           writeCache(next);
           return next;
         });
-        setSelectedObject(savedObject);
+        setSelectedObject(finalObject);
       } else {
         const newObj = await SheetsAPI.create(sheetObject);
-        const nextObject = { ...savedObject, id: newObj.id || savedObject.id };
+        const nextObject = { ...finalObject, id: newObj.id || finalObject.id };
         finalObject = nextObject;
         setObjects(prev => {
           const next = [...prev, nextObject];
