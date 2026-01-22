@@ -7,9 +7,9 @@ const { useState, useEffect, useMemo, useCallback, useRef } = React;
 const CACHE_KEY = 'nsh-archives-cache-v1';
 const IMAGE_CACHE_KEY = 'nsh-archives-images-v1';
 const CACHE_TTL_MS = 5 * 60 * 1000;
-const MAX_IMAGE_DIMENSION = 2000;
-const JPEG_QUALITY = 0.92;
-const MIN_JPEG_QUALITY = 0.78;
+const MAX_IMAGE_DIMENSION = 800;
+const JPEG_QUALITY = 0.85;
+const MIN_JPEG_QUALITY = 0.7;
 const MAX_SHEET_CELL_CHARS = 45000;
 
 const readCache = () => {
