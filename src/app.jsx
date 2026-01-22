@@ -9,6 +9,8 @@ const IMAGE_CACHE_KEY = 'nsh-archives-images-v1';
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const MAX_IMAGE_DIMENSION = 1200;
 const JPEG_QUALITY = 0.82;
+const MIN_JPEG_QUALITY = 0.62;
+const MAX_SHEET_CELL_CHARS = 45000;
 
 const readCache = () => {
   try {
@@ -514,7 +516,7 @@ const ImageGallery = ({ images, title }) => {
           <img
             src={currentImage.url}
             alt={currentImage.caption || title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain bg-stone-100"
             decoding="async"
           />
           <button
@@ -911,16 +913,40 @@ const ImageInput = ({ images, onChange }) => {
       const img = new Image();
       img.onload = () => {
         try {
+          const render = (width, height, quality) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            return canvas.toDataURL('image/jpeg', quality);
+          };
+
           const maxDim = Math.max(img.width, img.height);
-          const scale = maxDim > MAX_IMAGE_DIMENSION ? (MAX_IMAGE_DIMENSION / maxDim) : 1;
-          const width = Math.max(1, Math.round(img.width * scale));
-          const height = Math.max(1, Math.round(img.height * scale));
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
+          const baseScale = maxDim > MAX_IMAGE_DIMENSION ? (MAX_IMAGE_DIMENSION / maxDim) : 1;
+          let width = Math.max(1, Math.round(img.width * baseScale));
+          let height = Math.max(1, Math.round(img.height * baseScale));
+          let quality = JPEG_QUALITY;
+          let dataUrl = render(width, height, quality);
+
+          if (STORE_IMAGES_IN_SHEET) {
+            while (dataUrl.length > MAX_SHEET_CELL_CHARS) {
+              if (quality > MIN_JPEG_QUALITY) {
+                quality = Math.max(MIN_JPEG_QUALITY, quality - 0.08);
+              } else {
+                width = Math.max(320, Math.round(width * 0.85));
+                height = Math.max(320, Math.round(height * 0.85));
+                quality = JPEG_QUALITY;
+              }
+              dataUrl = render(width, height, quality);
+              if (width <= 320 && height <= 320 && quality <= MIN_JPEG_QUALITY) {
+                break;
+              }
+            }
+            if (dataUrl.length > MAX_SHEET_CELL_CHARS) {
+              throw new Error('Image too large for sheet storage.');
+            }
+          }
           URL.revokeObjectURL(objectUrl);
           resolve(dataUrl);
         } catch (error) {
