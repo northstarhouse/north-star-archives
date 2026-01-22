@@ -114,12 +114,23 @@ function getImageFolder() {
       Logger.log(`Invalid IMAGE_FOLDER_ID "${IMAGE_FOLDER_ID}": ${error}`);
     }
   }
-  const folderSource = FORCE_MY_DRIVE ? DriveApp.getRootFolder() : DriveApp;
-  const folders = folderSource.getFoldersByName(IMAGE_FOLDER_NAME);
-  if (folders.hasNext()) {
-    return folders.next();
+
+  if (FORCE_MY_DRIVE) {
+    // Search for folder in My Drive root only
+    const rootFolder = DriveApp.getRootFolder();
+    const folders = rootFolder.getFoldersByName(IMAGE_FOLDER_NAME);
+    if (folders.hasNext()) {
+      return folders.next();
+    }
+    return rootFolder.createFolder(IMAGE_FOLDER_NAME);
+  } else {
+    // Search anywhere in Drive (including shared drives)
+    const folders = DriveApp.getFoldersByName(IMAGE_FOLDER_NAME);
+    if (folders.hasNext()) {
+      return folders.next();
+    }
+    return DriveApp.createFolder(IMAGE_FOLDER_NAME);
   }
-  return folderSource.createFolder(IMAGE_FOLDER_NAME);
 }
 
 /**
@@ -340,29 +351,84 @@ function uploadImage(data) {
     throw new Error('Missing image data');
   }
 
-  const bytes = Utilities.base64Decode(data.data);
+  Logger.log(`uploadImage called with filename: ${data.filename}, mimeType: ${data.mimeType}, data length: ${(data.data || '').length}`);
+
+  let bytes;
+  try {
+    bytes = Utilities.base64Decode(data.data);
+    Logger.log(`Decoded ${bytes.length} bytes`);
+  } catch (decodeError) {
+    Logger.log(`Failed to decode base64: ${decodeError}`);
+    throw new Error(`Failed to decode image data: ${decodeError}`);
+  }
+
   const mimeType = data.mimeType || 'application/octet-stream';
   const filename = data.filename || 'image';
   const blob = Utilities.newBlob(bytes, mimeType, filename);
-  const folder = getImageFolder();
-  const file = folder.createFile(blob);
+
+  let folder;
+  try {
+    folder = getImageFolder();
+    Logger.log(`Got image folder: ${folder.getName()} (ID: ${folder.getId()})`);
+  } catch (folderError) {
+    Logger.log(`Failed to get image folder: ${folderError}`);
+    throw new Error(`Failed to get image folder: ${folderError}`);
+  }
+
+  let file;
+  try {
+    file = folder.createFile(blob);
+    Logger.log(`Created file: ${file.getName()} (ID: ${file.getId()})`);
+  } catch (createError) {
+    Logger.log(`Failed to create file: ${createError}`);
+    throw new Error(`Failed to create file in Drive: ${createError}`);
+  }
 
   try {
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    Logger.log(`Set sharing to ANYONE_WITH_LINK`);
   } catch (error) {
     Logger.log(`Failed to set link sharing for ${file.getId()}: ${error}`);
     try {
       file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
+      Logger.log(`Fallback: Set sharing to ANYONE`);
     } catch (fallbackError) {
       Logger.log(`Failed to set public sharing for ${file.getId()}: ${fallbackError}`);
     }
   }
 
-  return {
+  const result = {
     id: file.getId(),
     url: `https://drive.google.com/uc?export=view&id=${file.getId()}`,
     name: file.getName()
   };
+  Logger.log(`Returning: ${JSON.stringify(result)}`);
+  return result;
+}
+
+/**
+ * Test image upload - run this manually in Apps Script to verify Drive permissions
+ */
+function testImageUpload() {
+  try {
+    Logger.log('Testing image upload...');
+
+    // Create a simple 1x1 red PNG (smallest valid PNG)
+    const testBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==';
+
+    const result = uploadImage({
+      filename: 'test-image.png',
+      mimeType: 'image/png',
+      data: testBase64
+    });
+
+    Logger.log('SUCCESS! Image uploaded: ' + JSON.stringify(result));
+    Logger.log('Check your Drive for folder: ' + IMAGE_FOLDER_NAME);
+    return result;
+  } catch (error) {
+    Logger.log('FAILED: ' + error.toString());
+    throw error;
+  }
 }
 
 /**

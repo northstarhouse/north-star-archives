@@ -44,6 +44,7 @@ const parseDataUrl = (dataUrl) => {
 };
 
 const uploadLocalImagesToDrive = async (images) => {
+  console.log('uploadLocalImagesToDrive called with', images?.length, 'images');
   if (!Array.isArray(images) || images.length === 0) {
     return { images, failed: false };
   }
@@ -53,36 +54,43 @@ const uploadLocalImagesToDrive = async (images) => {
 
   for (let i = 0; i < images.length; i += 1) {
     const image = images[i];
+    console.log(`Processing image ${i}:`, { isLocal: image.isLocal, urlStart: image.url?.substring(0, 50) });
     if (!isLocalImage(image)) {
+      console.log(`Image ${i} is not local, skipping upload`);
       uploadedImages.push(image);
       continue;
     }
     const parsed = parseDataUrl(image.url);
     if (!parsed) {
+      console.error(`Image ${i}: Failed to parse data URL`);
       failed = true;
       uploadedImages.push(image);
       continue;
     }
+    console.log(`Image ${i}: Parsed OK, mimeType=${parsed.mimeType}, data length=${parsed.data?.length}`);
     try {
       const ext = mimeToExtension(parsed.mimeType);
       const filename = `image-${timestamp}-${i + 1}.${ext}`;
+      console.log(`Image ${i}: Uploading as ${filename}...`);
       const result = await SheetsAPI.uploadImage({
         filename,
         mimeType: parsed.mimeType,
         data: parsed.data
       });
+      console.log(`Image ${i}: Upload SUCCESS, url=${result.url}`);
       uploadedImages.push({
         ...image,
         url: result.url,
         isLocal: false
       });
     } catch (error) {
-      console.error('Image upload failed:', error);
+      console.error(`Image ${i}: Upload FAILED:`, error);
       failed = true;
       uploadedImages.push(image);
     }
   }
 
+  console.log('uploadLocalImagesToDrive result: failed=', failed);
   return { images: uploadedImages, failed };
 };
 
@@ -163,7 +171,7 @@ const mergeLocalImages = (objects) => {
 
 const USE_SHEETS = true;
 const USE_DRIVE_UPLOADS = true;
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwAGcXEtvH2joUHb0k1UxWSs8MYRqpUE-fn8wERcPxEQ9rK8hVGWcKnP7lpoWl7nNzM2A/exec';
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw6X8rdXiAUnasGTQdl-hcTN3zFa_Z4KPSa2au44i3u1eUbfwnov1jmX5yBEAdwduP_vQ/exec';
 const DRIVE_SCRIPT_URL = GOOGLE_SCRIPT_URL;
 
 // ============================================================================
@@ -349,6 +357,8 @@ const SheetsAPI = {
       throw new Error('Drive upload not configured');
     }
 
+    console.log(`Uploading image: ${filename} (${mimeType}), data length: ${(data || '').length}`);
+
     const payload = {
       action: 'uploadImage',
       filename,
@@ -357,7 +367,9 @@ const SheetsAPI = {
     };
 
     const response = await SheetsAPI.postJson(DRIVE_SCRIPT_URL, payload);
+    console.log('Upload response:', response);
     if (!response.success) throw new Error(response.error || 'Upload failed');
+    console.log('Upload successful, URL:', response.result?.url);
     return response.result;
   }
 };
@@ -927,6 +939,7 @@ const ImageInput = ({ images, onChange }) => {
       const base64 = dataUrl.split(',')[1] || '';
       if (!base64) throw new Error('Invalid image data');
       let uploadedUrl = null;
+      let uploadErrorMsg = null;
       if (USE_DRIVE_UPLOADS && SheetsAPI.isConfigured()) {
         try {
           const result = await SheetsAPI.uploadImage({
@@ -935,9 +948,15 @@ const ImageInput = ({ images, onChange }) => {
             data: base64
           });
           uploadedUrl = result?.url || null;
+          if (!uploadedUrl) {
+            uploadErrorMsg = 'Upload returned empty URL';
+          }
         } catch (error) {
           console.error('Image upload failed:', error);
+          uploadErrorMsg = error?.message || 'Upload failed';
         }
+      } else {
+        uploadErrorMsg = 'Drive uploads not configured';
       }
 
       const isPrimary = images.length === 0;
@@ -946,7 +965,7 @@ const ImageInput = ({ images, onChange }) => {
         setUploadError('');
       } else {
         onChange([...images, { url: dataUrl, caption: caption.trim(), isPrimary, isLocal: true }]);
-        setUploadError('');
+        setUploadError(uploadErrorMsg ? `Image saved locally (${uploadErrorMsg}). Will retry on save.` : '');
       }
       setCaption('');
     } catch (error) {
