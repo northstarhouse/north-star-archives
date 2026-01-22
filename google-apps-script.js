@@ -30,6 +30,7 @@
 
 const USE_SHEETS = true;
 const SHEET_NAME = 'Archives';
+const SHEET_ID = '1K7e_pbrh_EZfmqRsRNr2NlEF3fUOxwKYKuoztPvsQO8';
 const IMAGE_FOLDER_ID = '';
 const FORCE_MY_DRIVE = true;
 const IMAGE_FOLDER_NAME = 'Archival Photos';
@@ -69,7 +70,9 @@ const HEADERS = [
  * Get or create the Archives sheet
  */
 function getSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SHEET_ID
+    ? SpreadsheetApp.openById(SHEET_ID)
+    : SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(SHEET_NAME);
 
   if (!sheet) {
