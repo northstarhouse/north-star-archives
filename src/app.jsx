@@ -510,13 +510,13 @@ const ImageGallery = ({ images, title }) => {
     <>
       <div className="relative bg-stone-100 rounded-xl overflow-hidden">
         <div
-          className="relative aspect-[4/3] cursor-zoom-in"
+          className="relative cursor-zoom-in bg-stone-100"
           onClick={() => setIsZoomed(true)}
         >
           <img
             src={currentImage.url}
             alt={currentImage.caption || title}
-            className="w-full h-full object-contain bg-stone-100"
+            className="w-full h-auto object-contain"
             decoding="async"
           />
           <button
