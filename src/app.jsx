@@ -7,7 +7,7 @@ const { useState, useEffect, useMemo, useCallback, useRef } = React;
 const CACHE_KEY = 'nsh-archives-cache-v1';
 const IMAGE_CACHE_KEY = 'nsh-archives-images-v1';
 const CACHE_TTL_MS = 5 * 60 * 1000;
-const MAX_IMAGE_DIMENSION = 800;
+const MAX_IMAGE_DIMENSION = 1200;
 const JPEG_QUALITY = 0.82;
 
 const readCache = () => {
