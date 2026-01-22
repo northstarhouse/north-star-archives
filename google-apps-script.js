@@ -31,8 +31,8 @@
 const USE_SHEETS = true;
 const SHEET_NAME = 'Archives';
 const SHEET_ID = '1K7e_pbrh_EZfmqRsRNr2NlEF3fUOxwKYKuoztPvsQO8';
-const IMAGE_FOLDER_ID = '';
-const FORCE_MY_DRIVE = true;
+const IMAGE_FOLDER_ID = '17q2hY_D3p3FPpuJ-h139tS43f6TWhTAx';
+const FORCE_MY_DRIVE = false;
 const IMAGE_FOLDER_NAME = 'Archival Photos';
 
 // Column headers matching the object schema
