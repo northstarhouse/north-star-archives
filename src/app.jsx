@@ -1464,71 +1464,76 @@ const ObjectDetailView = ({ object, allObjects, onBack, onEdit, onFilterClick, o
         <span>Back to Collection</span>
       </button>
 
-      <ImageGallery images={object.images} title={object.title} />
-
-      <div className="mt-8 mb-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="font-display text-3xl md:text-4xl font-semibold text-stone-800">
-              {object.title}
-            </h1>
-            {object.portfolioTitle && (
-              <p className="text-lg text-stone-500 italic mt-1">{object.portfolioTitle}</p>
-            )}
-          </div>
-          <button
-            onClick={() => onEdit(object)}
-            className="flex items-center gap-2 px-4 py-2 bg-stone-100 hover:bg-stone-200 rounded-lg transition-colors text-sm"
-          >
-            <IconEdit size={16} />
-            Edit
-          </button>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-10">
+        <div>
+          <ImageGallery images={object.images} title={object.title} />
         </div>
-      </div>
-
-      {object.aboutText && (
-        <div className="mb-8">
-          <h2 className="font-display text-xl font-semibold text-stone-800 mb-3">About this Object</h2>
-          <p className="text-stone-700 leading-relaxed whitespace-pre-wrap">{object.aboutText}</p>
-        </div>
-      )}
-
-      <MetadataGrid object={object} onFilterClick={onFilterClick} />
-
-      {object.parts && object.parts.length > 0 && (
-        <div className="mt-6 pt-6 border-t border-stone-200">
-          <h3 className="metadata-label mb-2">Parts</h3>
-          <div className="space-y-2">
-            {object.parts.map((part, idx) => (
-              <div key={idx} className="bg-stone-50 border border-stone-200 rounded-lg px-3 py-2">
-                <div className="text-sm font-medium text-stone-700">
-                  {part.partId || 'Part ID'}
-                </div>
-                {part.partDescription && (
-                  <div className="text-xs text-stone-500">{part.partDescription}</div>
+        <div>
+          <div className="mb-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h1 className="font-display text-3xl md:text-4xl font-semibold text-stone-800">
+                  {object.title}
+                </h1>
+                {object.portfolioTitle && (
+                  <p className="text-lg text-stone-500 italic mt-1">{object.portfolioTitle}</p>
                 )}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {object.keywords && object.keywords.length > 0 && (
-        <div className="mt-6 pt-6 border-t border-stone-200">
-          <h3 className="metadata-label mb-2">Subject & Association Keywords</h3>
-          <div className="flex flex-wrap gap-2">
-            {object.keywords.map((keyword, idx) => (
               <button
-                key={idx}
-                onClick={() => onFilterClick('keywords', keyword)}
-                className="tag"
+                onClick={() => onEdit(object)}
+                className="flex items-center gap-2 px-4 py-2 bg-stone-100 hover:bg-stone-200 rounded-lg transition-colors text-sm"
               >
-                {keyword}
+                <IconEdit size={16} />
+                Edit
               </button>
-            ))}
+            </div>
           </div>
+
+          {object.aboutText && (
+            <div className="mb-8">
+              <h2 className="font-display text-xl font-semibold text-stone-800 mb-3">About this Object</h2>
+              <p className="text-stone-700 leading-relaxed whitespace-pre-wrap">{object.aboutText}</p>
+            </div>
+          )}
+
+          <MetadataGrid object={object} onFilterClick={onFilterClick} />
+
+          {object.parts && object.parts.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-stone-200">
+              <h3 className="metadata-label mb-2">Parts</h3>
+              <div className="space-y-2">
+                {object.parts.map((part, idx) => (
+                  <div key={idx} className="bg-stone-50 border border-stone-200 rounded-lg px-3 py-2">
+                    <div className="text-sm font-medium text-stone-700">
+                      {part.partId || 'Part ID'}
+                    </div>
+                    {part.partDescription && (
+                      <div className="text-xs text-stone-500">{part.partDescription}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {object.keywords && object.keywords.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-stone-200">
+              <h3 className="metadata-label mb-2">Subject & Association Keywords</h3>
+              <div className="flex flex-wrap gap-2">
+                {object.keywords.map((keyword, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => onFilterClick('keywords', keyword)}
+                    className="tag"
+                  >
+                    {keyword}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       <RelatedObjects
         currentObject={object}
