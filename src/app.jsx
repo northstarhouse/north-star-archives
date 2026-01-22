@@ -7,6 +7,8 @@ const { useState, useEffect, useMemo, useCallback, useRef } = React;
 const CACHE_KEY = 'nsh-archives-cache-v1';
 const IMAGE_CACHE_KEY = 'nsh-archives-images-v1';
 const CACHE_TTL_MS = 5 * 60 * 1000;
+const MAX_IMAGE_DIMENSION = 1200;
+const JPEG_QUALITY = 0.82;
 
 const readCache = () => {
   try {
@@ -903,12 +905,34 @@ const ImageInput = ({ images, onChange }) => {
   const [uploadError, setUploadError] = useState('');
   const fileInputRef = useRef(null);
 
-  const readAsDataUrl = (file) => (
+  const fileToResizedDataUrl = (file) => (
     new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsDataURL(file);
+      const objectUrl = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const maxDim = Math.max(img.width, img.height);
+          const scale = maxDim > MAX_IMAGE_DIMENSION ? (MAX_IMAGE_DIMENSION / maxDim) : 1;
+          const width = Math.max(1, Math.round(img.width * scale));
+          const height = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
+          URL.revokeObjectURL(objectUrl);
+          resolve(dataUrl);
+        } catch (error) {
+          URL.revokeObjectURL(objectUrl);
+          reject(error);
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('Failed to load image'));
+      };
+      img.src = objectUrl;
     })
   );
 
@@ -941,7 +965,7 @@ const ImageInput = ({ images, onChange }) => {
 
     try {
       const sourceFile = isHeicFile(file) ? await convertHeicToJpeg(file) : file;
-      const dataUrl = await readAsDataUrl(sourceFile);
+      const dataUrl = await fileToResizedDataUrl(sourceFile);
       const base64 = dataUrl.split(',')[1] || '';
       if (!base64) throw new Error('Invalid image data');
       let uploadedUrl = null;
