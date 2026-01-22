@@ -24,6 +24,7 @@ const readCache = () => {
 const isLocalImage = (image) => {
   if (!image) return false;
   if (image.isLocal) return true;
+  if (STORE_IMAGES_IN_SHEET) return false;
   return typeof image.url === 'string' && image.url.startsWith('data:');
 };
 
@@ -96,6 +97,7 @@ const uploadLocalImagesToDrive = async (images) => {
 
 const stripLocalImagesFromObject = (object) => {
   if (!object) return object;
+  if (STORE_IMAGES_IN_SHEET) return object;
   const images = Array.isArray(object.images)
     ? object.images.filter((img) => !isLocalImage(img))
     : [];
@@ -111,7 +113,10 @@ const writeCache = (objects) => {
   try {
     localStorage.setItem(
       CACHE_KEY,
-      JSON.stringify({ objects: stripLocalImagesFromObjects(objects), updatedAt: Date.now() })
+      JSON.stringify({
+        objects: STORE_IMAGES_IN_SHEET ? objects : stripLocalImagesFromObjects(objects),
+        updatedAt: Date.now()
+      })
     );
   } catch (error) {
     console.warn('Failed to write cache:', error);
@@ -170,7 +175,8 @@ const mergeLocalImages = (objects) => {
 // 5. Copy the Web App URL and paste it below
 
 const USE_SHEETS = true;
-const USE_DRIVE_UPLOADS = true;
+const USE_DRIVE_UPLOADS = false;
+const STORE_IMAGES_IN_SHEET = true;
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw6X8rdXiAUnasGTQdl-hcTN3zFa_Z4KPSa2au44i3u1eUbfwnov1jmX5yBEAdwduP_vQ/exec';
 const DRIVE_SCRIPT_URL = GOOGLE_SCRIPT_URL;
 
@@ -939,7 +945,6 @@ const ImageInput = ({ images, onChange }) => {
       const base64 = dataUrl.split(',')[1] || '';
       if (!base64) throw new Error('Invalid image data');
       let uploadedUrl = null;
-      let uploadErrorMsg = null;
       if (USE_DRIVE_UPLOADS && SheetsAPI.isConfigured()) {
         try {
           const result = await SheetsAPI.uploadImage({
@@ -948,25 +953,26 @@ const ImageInput = ({ images, onChange }) => {
             data: base64
           });
           uploadedUrl = result?.url || null;
-          if (!uploadedUrl) {
-            uploadErrorMsg = 'Upload returned empty URL';
-          }
         } catch (error) {
           console.error('Image upload failed:', error);
-          uploadErrorMsg = error?.message || 'Upload failed';
         }
-      } else {
-        uploadErrorMsg = 'Drive uploads not configured';
       }
 
       const isPrimary = images.length === 0;
       if (uploadedUrl) {
         onChange([...images, { url: uploadedUrl, caption: caption.trim(), isPrimary }]);
-        setUploadError('');
       } else {
-        onChange([...images, { url: dataUrl, caption: caption.trim(), isPrimary, isLocal: true }]);
-        setUploadError(uploadErrorMsg ? `Image saved locally (${uploadErrorMsg}). Will retry on save.` : '');
+        onChange([
+          ...images,
+          {
+            url: dataUrl,
+            caption: caption.trim(),
+            isPrimary,
+            isLocal: STORE_IMAGES_IN_SHEET ? false : true
+          }
+        ]);
       }
+      setUploadError('');
       setCaption('');
     } catch (error) {
       console.error('Image upload failed:', error);
