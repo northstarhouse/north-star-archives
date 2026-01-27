@@ -8,9 +8,9 @@ const CACHE_KEY = 'nsh-archives-cache-v1';
 const IMAGE_CACHE_KEY = 'nsh-archives-images-v1';
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const MAX_IMAGE_DIMENSION = 800;
-const JPEG_QUALITY = 0.85;
-const MIN_JPEG_QUALITY = 0.7;
-const MAX_SHEET_CELL_CHARS = 45000;
+const JPEG_QUALITY = 0.82;
+const MIN_JPEG_QUALITY = 0.5;
+const MAX_SHEET_CELL_CHARS = 42000;
 
 const readCache = () => {
   try {
@@ -934,21 +934,18 @@ const ImageInput = ({ images, onChange }) => {
           let dataUrl = render(width, height, quality);
 
           if (STORE_IMAGES_IN_SHEET) {
-            while (dataUrl.length > MAX_SHEET_CELL_CHARS) {
+            const minDim = 240;
+            let safety = 0;
+            while (dataUrl.length > MAX_SHEET_CELL_CHARS && safety < 30) {
               if (quality > MIN_JPEG_QUALITY) {
                 quality = Math.max(MIN_JPEG_QUALITY, quality - 0.08);
               } else {
-                width = Math.max(320, Math.round(width * 0.85));
-                height = Math.max(320, Math.round(height * 0.85));
+                width = Math.max(minDim, Math.round(width * 0.8));
+                height = Math.max(minDim, Math.round(height * 0.8));
                 quality = JPEG_QUALITY;
               }
               dataUrl = render(width, height, quality);
-              if (width <= 320 && height <= 320 && quality <= MIN_JPEG_QUALITY) {
-                break;
-              }
-            }
-            if (dataUrl.length > MAX_SHEET_CELL_CHARS) {
-              throw new Error('Image too large for sheet storage.');
+              safety += 1;
             }
           }
           URL.revokeObjectURL(objectUrl);
