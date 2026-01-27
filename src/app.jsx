@@ -686,6 +686,10 @@ const MetadataGrid = ({ object, onFilterClick }) => {
       <MetadataField label="Cataloguer" value={object.cataloguer} />
       <MetadataField label="Related Acquisition Record" value={object.relatedAcquisitionRecord} />
       <MetadataField label="Acquisition Notes" value={object.acquisitionNotes} />
+      <MetadataField
+        label="Amount Paid / Estimated Replacement Value"
+        value={object.amountPaidOrEstimatedReplacementValue}
+      />
     </div>
   );
 };
@@ -1132,6 +1136,7 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
     relatedAcquisitionRecord: '',
     acquisitionNotes: '',
     parts: [],
+    amountPaidOrEstimatedReplacementValue: '',
     ...object
   });
 
@@ -1439,6 +1444,18 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
             placeholder="e.g., Donor requests items be returned if administration changes"
             className="w-full px-4 py-3 border border-stone-300 rounded-lg"
             rows={2}
+          />
+        </div>
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-stone-700 mb-1">
+            Amount Paid or Estimated Replacement Value
+          </label>
+          <input
+            type="text"
+            value={form.amountPaidOrEstimatedReplacementValue}
+            onChange={(e) => updateField('amountPaidOrEstimatedReplacementValue', e.target.value)}
+            placeholder="e.g., $1,200 (estimated)"
+            className="w-full px-4 py-3 border border-stone-300 rounded-lg"
           />
         </div>
       </section>

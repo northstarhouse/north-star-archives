@@ -25,7 +25,7 @@
  *          controllingInstitution, collectionType, classification,
  *          physicalCharacteristics, cataloguedDate, cataloguer,
  *          relatedAcquisitionRecord, acquisitionNotes, parts,
- *          createdAt, updatedAt
+ *          amountPaidOrEstimatedReplacementValue, createdAt, updatedAt
  */
 
 const USE_SHEETS = true;
@@ -62,6 +62,7 @@ const HEADERS = [
   'relatedAcquisitionRecord',
   'acquisitionNotes',
   'parts',
+  'amountPaidOrEstimatedReplacementValue',
   'createdAt',
   'updatedAt'
 ];
