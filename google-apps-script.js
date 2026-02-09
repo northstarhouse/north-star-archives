@@ -100,6 +100,8 @@ function getSheet() {
       headerRange.setFontWeight('bold');
       sheet.setFrozenRows(1);
     }
+    // Keep IDs as text to avoid numeric coercion that breaks lookups.
+    sheet.getRange(2, 1, Math.max(sheet.getLastRow() - 1, 1), 1).setNumberFormat('@');
   } catch (error) {
     Logger.log(`Failed to validate headers: ${error}`);
   }
@@ -241,7 +243,11 @@ function getAllObjects() {
         }
       }
 
-      obj[header] = value;
+      if (header === 'id') {
+        obj[header] = value ? String(value) : '';
+      } else {
+        obj[header] = value;
+      }
     }
 
     // Only include rows with an ID
@@ -263,6 +269,7 @@ function createObject(obj) {
   if (!obj.id) {
     obj.id = new Date().getTime().toString();
   }
+  obj.id = String(obj.id);
 
   // Set timestamps
   const now = new Date().toISOString();
@@ -278,6 +285,7 @@ function createObject(obj) {
       return JSON.stringify(value || []);
     }
 
+    if (header === 'id') return String(value || '');
     return value || '';
   });
 
@@ -293,11 +301,12 @@ function createObject(obj) {
 function updateObject(obj) {
   const sheet = getSheet();
   const data = sheet.getDataRange().getValues();
+  const targetId = String(obj.id || '');
 
   // Find the row with matching ID
   let rowIndex = -1;
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === obj.id) {
+    if (String(data[i][0]) === targetId) {
       rowIndex = i + 1; // +1 because sheets are 1-indexed
       break;
     }
@@ -320,6 +329,7 @@ function updateObject(obj) {
       return JSON.stringify(value || []);
     }
 
+    if (header === 'id') return String(value || '');
     return value || '';
   });
 
@@ -335,10 +345,11 @@ function updateObject(obj) {
 function deleteObject(id) {
   const sheet = getSheet();
   const data = sheet.getDataRange().getValues();
+  const targetId = String(id || '');
 
   // Find the row with matching ID
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === id) {
+    if (String(data[i][0]) === targetId) {
       sheet.deleteRow(i + 1); // +1 because sheets are 1-indexed
       return { deleted: true, id: id };
     }
