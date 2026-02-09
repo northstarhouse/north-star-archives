@@ -697,7 +697,7 @@ const MetadataGrid = ({ object, onFilterClick }) => {
       <MetadataField label="Related Acquisition Record" value={object.relatedAcquisitionRecord} />
       <MetadataField label="Acquisition Notes" value={object.acquisitionNotes} />
       <MetadataField
-        label="Amount Paid / Estimated Replacement Value"
+        label="Estimated Value"
         value={object.amountPaidOrEstimatedReplacementValue}
       />
     </div>
@@ -1457,7 +1457,7 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
         </div>
         <div className="mt-4">
           <label className="block text-sm font-medium text-stone-700 mb-1">
-            Amount Paid or Estimated Replacement Value
+            Estimated Value
           </label>
           <input
             type="text"
