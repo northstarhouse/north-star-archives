@@ -1203,16 +1203,6 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
               className="w-full px-4 py-3 border border-stone-300 rounded-lg"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">Controlling Institution</label>
-            <input
-              type="text"
-              value={form.controllingInstitution}
-              onChange={(e) => updateField('controllingInstitution', e.target.value)}
-              placeholder="e.g., North Star House"
-              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
-            />
-          </div>
         </div>
       </section>
 
@@ -1230,6 +1220,16 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
               onChange={(e) => updateField('title', e.target.value)}
               className="w-full px-4 py-3 border border-stone-300 rounded-lg"
               required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Controlling Institution</label>
+            <input
+              type="text"
+              value={form.controllingInstitution}
+              onChange={(e) => updateField('controllingInstitution', e.target.value)}
+              placeholder="e.g., North Star House"
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
             />
           </div>
           <div>
