@@ -435,6 +435,16 @@ const IconEdit = ({ size = 24 }) => (
   </svg>
 );
 
+const IconTrash = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6"></polyline>
+    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+    <line x1="10" y1="11" x2="10" y2="17"></line>
+    <line x1="14" y1="11" x2="14" y2="17"></line>
+  </svg>
+);
+
 const IconGrid = ({ size = 24 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="7" height="7"></rect>
@@ -1493,7 +1503,7 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
 // OBJECT DETAIL VIEW
 // ============================================================================
 
-const ObjectDetailView = ({ object, allObjects, onBack, onEdit, onFilterClick, onObjectClick }) => {
+const ObjectDetailView = ({ object, allObjects, onBack, onEdit, onDelete, onFilterClick, onObjectClick, isDeleting }) => {
   return (
     <div className="max-w-4xl mx-auto">
       <button
@@ -1525,6 +1535,14 @@ const ObjectDetailView = ({ object, allObjects, onBack, onEdit, onFilterClick, o
               >
                 <IconEdit size={16} />
                 Edit
+              </button>
+              <button
+                onClick={() => onDelete(object)}
+                disabled={isDeleting}
+                className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-colors text-sm disabled:opacity-50"
+              >
+                <IconTrash size={16} />
+                Delete
               </button>
             </div>
           </div>
@@ -1787,6 +1805,7 @@ const ArchiveApp = () => {
   const [filters, setFilters] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
 
   // Load data on mount
@@ -1921,6 +1940,38 @@ const ArchiveApp = () => {
     window.scrollTo(0, 0);
   };
 
+  const handleDelete = async (object) => {
+    if (!object?.id) return;
+    const confirmed = window.confirm(`Delete "${object.title}"? This cannot be undone.`);
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    try {
+      if (USE_SHEETS && SheetsAPI.isConfigured()) {
+        const ok = await SheetsAPI.delete(object.id);
+        if (!ok) throw new Error('Delete failed');
+      }
+
+      setObjects(prev => {
+        const next = prev.filter(o => o.id !== object.id);
+        writeCache(next);
+        return next;
+      });
+
+      const imageCache = readImageCache();
+      delete imageCache[object.id];
+      writeImageCache(imageCache);
+
+      setSelectedObject(null);
+      setView('browse');
+      window.scrollTo(0, 0);
+    } catch (error) {
+      console.error('Failed to delete object:', error);
+      alert('Delete failed. Please try again.');
+    }
+    setIsDeleting(false);
+  };
+
   return (
     <div className="min-h-screen bg-stone-50">
       {/* Header */}
@@ -1966,6 +2017,8 @@ const ArchiveApp = () => {
             allObjects={objects}
             onBack={handleBack}
             onEdit={handleEdit}
+            onDelete={handleDelete}
+            isDeleting={isDeleting}
             onFilterClick={handleFilterClick}
             onObjectClick={handleObjectClick}
           />
