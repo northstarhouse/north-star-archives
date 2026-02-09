@@ -1134,7 +1134,7 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
     objectType: '',
     objectNumber: '',
     accessionDate: '',
-    controllingInstitution: '',
+    controllingInstitution: 'North Star House',
     collectionType: '',
     classification: '',
     physicalCharacteristics: '',
