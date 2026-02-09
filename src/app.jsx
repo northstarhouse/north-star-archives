@@ -1139,7 +1139,7 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
     classification: '',
     physicalCharacteristics: '',
     cataloguedDate: '',
-    cataloguer: '',
+    cataloguer: 'Lisa Robinson',
     relatedAcquisitionRecord: '',
     acquisitionNotes: '',
     parts: [],
@@ -1424,13 +1424,15 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
           </div>
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-1">Cataloguer</label>
-            <input
-              type="text"
+            <select
               value={form.cataloguer}
               onChange={(e) => updateField('cataloguer', e.target.value)}
-              placeholder="e.g., Carola Davis"
-              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
-            />
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white"
+            >
+              <option value="Lisa Robinson">Lisa Robinson</option>
+              <option value="Rebekah Freeman">Rebekah Freeman</option>
+              <option value="Other">Other</option>
+            </select>
           </div>
         </div>
         <div className="mt-4">
