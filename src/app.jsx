@@ -205,7 +205,7 @@ const COLLECTIONS = [
   'Furnishings',
   'Art',
   'Photographs',
-  'Decorative Display',
+  'Decorative display',
   'Documents',
   'Tools/Equipment',
   'Fixture',
