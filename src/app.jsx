@@ -1171,6 +1171,16 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
           </div>
         </div>
         <div className="mt-4">
+          <label className="block text-sm font-medium text-stone-700 mb-1">Estimated Value</label>
+          <input
+            type="text"
+            value={form.amountPaidOrEstimatedReplacementValue}
+            onChange={(e) => updateField('amountPaidOrEstimatedReplacementValue', e.target.value)}
+            placeholder="e.g., $1,200 (estimated)"
+            className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+          />
+        </div>
+        <div className="mt-4">
           <label className="block text-sm font-medium text-stone-700 mb-1">Acquisition Notes</label>
           <textarea
             value={form.acquisitionNotes}
@@ -1236,15 +1246,6 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
         </div>
       </section>
 
-      {/* Keywords */}
-      <section>
-        <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Keywords for Search</h3>
-        <TagInput
-          tags={form.keywords}
-          onChange={(tags) => updateField('keywords', tags)}
-          placeholder="Add keyword..."
-        />
-      </section>
 
       {/* Classification */}
       <section>
@@ -1302,18 +1303,17 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
             </select>
           </div>
         </div>
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-stone-700 mb-1">
-            Estimated Value
-          </label>
-          <input
-            type="text"
-            value={form.amountPaidOrEstimatedReplacementValue}
-            onChange={(e) => updateField('amountPaidOrEstimatedReplacementValue', e.target.value)}
-            placeholder="e.g., $1,200 (estimated)"
-            className="w-full px-4 py-3 border border-stone-300 rounded-lg"
-          />
-        </div>
+      </section>
+
+
+      {/* Keywords */}
+      <section>
+        <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Keywords for Search</h3>
+        <TagInput
+          tags={form.keywords}
+          onChange={(tags) => updateField('keywords', tags)}
+          placeholder="Add keyword..."
+        />
       </section>
 
       {/* Actions */}
