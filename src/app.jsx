@@ -1473,7 +1473,7 @@ const BrowseView = ({ objects, filters, onFilterChange, onObjectClick, onAddNew,
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="font-header text-3xl md:text-4xl font-semibold text-stone-800">Archival Collection</h1>
+          <h1 className="font-display text-3xl md:text-4xl font-semibold text-stone-800">Archival Collection</h1>
           <div className="flex items-center gap-2 mt-1">
             <p className="text-stone-600">North Star House</p>
             {isConnected ? (
@@ -1794,7 +1794,7 @@ const ArchiveApp = () => {
                   <path d="M12 3.5l2.6 5.9L21 12l-6.4 2.6L12 20.5l-2.6-5.9L3 12l6.4-2.6L12 3.5z" />
                 </svg>
               </div>
-              <span className="font-header text-xl font-semibold text-stone-800">
+              <span className="font-display text-xl font-semibold text-stone-800">
                 North Star House
               </span>
             </button>
