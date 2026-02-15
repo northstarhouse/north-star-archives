@@ -1474,18 +1474,6 @@ const BrowseView = ({ objects, filters, onFilterChange, onObjectClick, onAddNew,
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="font-display text-3xl md:text-4xl font-semibold text-stone-800">Archival Collection</h1>
-          <div className="flex items-center gap-2 mt-1">
-            <p className="text-stone-600">North Star House</p>
-            {isConnected ? (
-              <span className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
-                <IconCheck size={12} /> Synced
-              </span>
-            ) : (
-              <span className="flex items-center gap-1 text-xs text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full">
-                <IconCloud size={12} /> Local
-              </span>
-            )}
-          </div>
         </div>
         <div className="flex gap-2">
           <button
