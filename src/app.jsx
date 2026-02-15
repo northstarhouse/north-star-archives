@@ -202,28 +202,20 @@ const OBJECT_TYPES = [
 ];
 
 const COLLECTIONS = [
-  'Original Fixtures',
-  'Construction Documents',
-  'Historic Photographs',
-  'Restored Elements',
-  'Building Materials',
   'Furnishings',
-  'Donor Contributions',
-  'Morgan Archives',
-  'Arts & Crafts Collection'
+  'Art',
+  'Photographs',
+  'Decorative Display',
+  'Documents',
+  'Tools/Equipment',
+  'Fixture',
+  'Docent Display'
 ];
 
-const MAKER_ROLES = [
-  'Architect',
-  'Designer',
-  'Builder',
-  'Craftsman',
-  'Artist',
-  'Collaborator',
-  'Fabricator',
-  'Photographer',
-  'Artisan',
-  'Contractor'
+const ORIGIN_OPTIONS = [
+  'Donor (name)',
+  'Purchase',
+  'Found on premises'
 ];
 
 // ============================================================================
@@ -657,12 +649,7 @@ const MetadataField = ({ label, value, onClick, isClickable = false }) => {
 const MetadataGrid = ({ object, onFilterClick }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 border-t border-stone-200">
-      <MetadataField
-        label="Object Type"
-        value={object.objectType}
-        isClickable
-        onClick={() => onFilterClick('objectType', object.objectType)}
-      />
+      <MetadataField label="Object Type" value={object.objectType} />
       <MetadataField label="Object Number" value={object.objectNumber} />
       <MetadataField label="Accession Date" value={object.accessionDate} />
       <MetadataField
@@ -671,13 +658,9 @@ const MetadataGrid = ({ object, onFilterClick }) => {
         isClickable
         onClick={() => onFilterClick('collection', object.collection)}
       />
-      <MetadataField label="Collection Type" value={object.collectionType} />
-      <MetadataField label="Classification" value={object.classification} />
-      <MetadataField label="Controlling Institution" value={object.controllingInstitution} />
-      <MetadataField label="Portfolio Title" value={object.portfolioTitle} />
-      <MetadataField label="Medium & Materials" value={object.mediumMaterials} />
       <MetadataField label="Measurements" value={object.measurements} />
       <MetadataField label="Physical Characteristics" value={object.physicalCharacteristics} />
+      <MetadataField label="Location in House/On Property" value={object.locationInHouse} />
       <MetadataField
         label="Designer"
         value={object.designer}
@@ -690,11 +673,9 @@ const MetadataGrid = ({ object, onFilterClick }) => {
         isClickable={!!object.maker}
         onClick={() => onFilterClick('maker', object.maker)}
       />
-      <MetadataField label="Maker Role" value={object.makerRole} />
       <MetadataField label="From (Origin/Donor/Source)" value={object.from} />
       <MetadataField label="Catalogued Date" value={object.cataloguedDate} />
       <MetadataField label="Cataloguer" value={object.cataloguer} />
-      <MetadataField label="Related Acquisition Record" value={object.relatedAcquisitionRecord} />
       <MetadataField label="Acquisition Notes" value={object.acquisitionNotes} />
       <MetadataField
         label="Estimated Value"
@@ -850,66 +831,6 @@ const TagInput = ({ tags, onChange, placeholder = "Add tag..." }) => {
   );
 };
 
-const PartsInput = ({ parts, onChange }) => {
-  const [partId, setPartId] = useState('');
-  const [partDescription, setPartDescription] = useState('');
-
-  const addPart = () => {
-    const trimmedId = partId.trim();
-    const trimmedDesc = partDescription.trim();
-    if (!trimmedId && !trimmedDesc) return;
-    onChange([...(parts || []), { partId: trimmedId, partDescription: trimmedDesc }]);
-    setPartId('');
-    setPartDescription('');
-  };
-
-  const removePart = (idx) => {
-    onChange((parts || []).filter((_, i) => i !== idx));
-  };
-
-  return (
-    <div className="space-y-2">
-      {(parts || []).map((part, idx) => (
-        <div key={idx} className="flex items-start gap-3 bg-stone-50 p-3 rounded-lg">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-stone-700 truncate">{part.partId || 'Part ID'}</p>
-            <p className="text-xs text-stone-500">{part.partDescription || 'Part description'}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => removePart(idx)}
-            className="text-stone-400 hover:text-red-600"
-          >
-            <IconX size={18} />
-          </button>
-        </div>
-      ))}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        <input
-          type="text"
-          value={partId}
-          onChange={(e) => setPartId(e.target.value)}
-          placeholder="Part ID Number"
-          className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
-        />
-        <input
-          type="text"
-          value={partDescription}
-          onChange={(e) => setPartDescription(e.target.value)}
-          placeholder="Part Description"
-          className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
-        />
-      </div>
-      <button
-        type="button"
-        onClick={addPart}
-        className="px-3 py-2 bg-stone-100 hover:bg-stone-200 rounded-lg transition-colors text-sm"
-      >
-        Add Part
-      </button>
-    </div>
-  );
-};
 
 // ============================================================================
 // IMAGE INPUT COMPONENT
@@ -1121,28 +1042,21 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
   const [form, setForm] = useState({
     title: '',
     aboutText: '',
+    locationInHouse: '',
     images: [],
     from: '',
     designer: '',
     maker: '',
-    makerRole: '',
-    portfolioTitle: '',
-    mediumMaterials: '',
     measurements: '',
     keywords: [],
     collection: '',
     objectType: '',
     objectNumber: '',
     accessionDate: '',
-    controllingInstitution: 'North Star House',
-    collectionType: '',
-    classification: '',
     physicalCharacteristics: '',
     cataloguedDate: '',
     cataloguer: 'Lisa Robinson',
-    relatedAcquisitionRecord: '',
     acquisitionNotes: '',
-    parts: [],
     amountPaidOrEstimatedReplacementValue: '',
     ...object
   });
@@ -1184,13 +1098,16 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
           <label className="block text-sm font-medium text-stone-700 mb-1">
             From (Origin, Donor, or Source)
           </label>
-          <input
-            type="text"
+          <select
             value={form.from}
             onChange={(e) => updateField('from', e.target.value)}
-            placeholder="e.g., Original Construction, Donated by Smith Family"
-            className="w-full px-4 py-3 border border-stone-300 rounded-lg"
-          />
+            className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white"
+          >
+            <option value="">Select origin...</option>
+            {ORIGIN_OPTIONS.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           <div>
@@ -1212,7 +1129,7 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-1">
-              Name / Title <span className="text-red-500">*</span>
+              Name of Object <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -1223,22 +1140,22 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">Controlling Institution</label>
-            <input
-              type="text"
-              value={form.controllingInstitution}
-              onChange={(e) => updateField('controllingInstitution', e.target.value)}
-              placeholder="e.g., North Star House"
-              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
-            />
-          </div>
-          <div>
             <label className="block text-sm font-medium text-stone-700 mb-1">About this Object</label>
             <textarea
               value={form.aboutText}
               onChange={(e) => updateField('aboutText', e.target.value)}
               rows={5}
               className="w-full px-4 py-3 border border-stone-300 rounded-lg resize-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Location in House/On Property</label>
+            <input
+              type="text"
+              value={form.locationInHouse}
+              onChange={(e) => updateField('locationInHouse', e.target.value)}
+              placeholder="e.g., Dining Room, East wall"
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
             />
           </div>
         </div>
@@ -1268,29 +1185,6 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
               className="w-full px-4 py-3 border border-stone-300 rounded-lg"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">Maker Role</label>
-            <select
-              value={form.makerRole}
-              onChange={(e) => updateField('makerRole', e.target.value)}
-              className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white"
-            >
-              <option value="">Select role...</option>
-              {MAKER_ROLES.map(role => (
-                <option key={role} value={role}>{role}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">Portfolio Title</label>
-            <input
-              type="text"
-              value={form.portfolioTitle}
-              onChange={(e) => updateField('portfolioTitle', e.target.value)}
-              placeholder="e.g., North Star House - Structural Elements"
-              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
-            />
-          </div>
         </div>
       </section>
 
@@ -1298,16 +1192,6 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
       <section>
         <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Physical Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">Medium and Materials</label>
-            <input
-              type="text"
-              value={form.mediumMaterials}
-              onChange={(e) => updateField('mediumMaterials', e.target.value)}
-              placeholder="e.g., Old-growth Redwood, Wrought Iron"
-              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
-            />
-          </div>
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-1">Measurements</label>
             <input
@@ -1333,7 +1217,7 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
 
       {/* Keywords */}
       <section>
-        <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Subject and Association Keywords</h3>
+        <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Keywords for Search</h3>
         <TagInput
           tags={form.keywords}
           onChange={(tags) => updateField('keywords', tags)}
@@ -1345,52 +1229,6 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
       <section>
         <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Classification</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">Named Collection</label>
-            <select
-              value={form.collection}
-              onChange={(e) => updateField('collection', e.target.value)}
-              className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white"
-            >
-              <option value="">Select collection...</option>
-              {COLLECTIONS.map(col => (
-                <option key={col} value={col}>{col}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">Object Type</label>
-            <select
-              value={form.objectType}
-              onChange={(e) => updateField('objectType', e.target.value)}
-              className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white"
-            >
-              <option value="">Select type...</option>
-              {OBJECT_TYPES.map(type => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">Collection Type</label>
-            <input
-              type="text"
-              value={form.collectionType}
-              onChange={(e) => updateField('collectionType', e.target.value)}
-              placeholder="e.g., Decorative furnishings"
-              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">Classification</label>
-            <input
-              type="text"
-              value={form.classification}
-              onChange={(e) => updateField('classification', e.target.value)}
-              placeholder="e.g., Salad Plates"
-              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
-            />
-          </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-stone-700 mb-1">Object Number</label>
             <input
@@ -1402,11 +1240,6 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
             />
           </div>
         </div>
-      </section>
-
-      <section>
-        <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Parts</h3>
-        <PartsInput parts={form.parts} onChange={(parts) => updateField('parts', parts)} />
       </section>
 
       <section>
@@ -1434,16 +1267,6 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
               <option value="Other">Other</option>
             </select>
           </div>
-        </div>
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-stone-700 mb-1">Related Acquisition Record</label>
-          <textarea
-            value={form.relatedAcquisitionRecord}
-            onChange={(e) => updateField('relatedAcquisitionRecord', e.target.value)}
-            placeholder="e.g., 2025.001.01; Acquired; Lois Hensel; Gift with conditions; 07/25/2025"
-            className="w-full px-4 py-3 border border-stone-300 rounded-lg"
-            rows={2}
-          />
         </div>
         <div className="mt-4">
           <label className="block text-sm font-medium text-stone-700 mb-1">Acquisition Notes</label>
@@ -1527,9 +1350,6 @@ const ObjectDetailView = ({ object, allObjects, onBack, onEdit, onDelete, onFilt
                 <h1 className="font-display text-3xl md:text-4xl font-semibold text-stone-800">
                   {object.title}
                 </h1>
-                {object.portfolioTitle && (
-                  <p className="text-lg text-stone-500 italic mt-1">{object.portfolioTitle}</p>
-                )}
               </div>
               <button
                 onClick={() => onEdit(object)}
@@ -1558,27 +1378,9 @@ const ObjectDetailView = ({ object, allObjects, onBack, onEdit, onDelete, onFilt
 
           <MetadataGrid object={object} onFilterClick={onFilterClick} />
 
-          {object.parts && object.parts.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-stone-200">
-              <h3 className="metadata-label mb-2">Parts</h3>
-              <div className="space-y-2">
-                {object.parts.map((part, idx) => (
-                  <div key={idx} className="bg-stone-50 border border-stone-200 rounded-lg px-3 py-2">
-                    <div className="text-sm font-medium text-stone-700">
-                      {part.partId || 'Part ID'}
-                    </div>
-                    {part.partDescription && (
-                      <div className="text-xs text-stone-500">{part.partDescription}</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {object.keywords && object.keywords.length > 0 && (
             <div className="mt-6 pt-6 border-t border-stone-200">
-              <h3 className="metadata-label mb-2">Subject & Association Keywords</h3>
+              <h3 className="metadata-label mb-2">Keywords for Search</h3>
               <div className="flex flex-wrap gap-2">
                 {object.keywords.map((keyword, idx) => (
                   <button
@@ -1610,9 +1412,7 @@ const ObjectDetailView = ({ object, allObjects, onBack, onEdit, onDelete, onFilt
 
 const BrowseView = ({ objects, filters, onFilterChange, onObjectClick, onAddNew, onRefresh, isLoading, isConnected }) => {
   const [searchQuery, setSearchQuery] = useState('');
-
-  const objectTypes = [...new Set(objects.map(o => o.objectType).filter(Boolean))];
-  const collections = [...new Set(objects.map(o => o.collection).filter(Boolean))];
+  const collections = COLLECTIONS;
 
   const filteredObjects = useMemo(() => {
     return objects.filter(obj => {
@@ -1625,13 +1425,10 @@ const BrowseView = ({ objects, filters, onFilterChange, onObjectClick, onAddNew,
           obj.designer,
           obj.maker,
           obj.from,
-          obj.mediumMaterials,
-          obj.portfolioTitle,
           ...(obj.keywords || [])
         ].join(' ').toLowerCase();
         if (!searchableText.includes(query)) return false;
       }
-      if (filters.objectType && obj.objectType !== filters.objectType) return false;
       if (filters.collection && obj.collection !== filters.collection) return false;
       if (filters.keywords && !obj.keywords?.includes(filters.keywords)) return false;
       if (filters.designer && obj.designer !== filters.designer) return false;
@@ -1699,16 +1496,6 @@ const BrowseView = ({ objects, filters, onFilterChange, onObjectClick, onAddNew,
             />
           </div>
           <select
-            value={filters.objectType || ''}
-            onChange={(e) => onFilterChange({ ...filters, objectType: e.target.value || null })}
-            className="px-4 py-3 border border-stone-300 rounded-lg bg-white min-w-[160px]"
-          >
-            <option value="">All Types</option>
-            {objectTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-          <select
             value={filters.collection || ''}
             onChange={(e) => onFilterChange({ ...filters, collection: e.target.value || null })}
             className="px-4 py-3 border border-stone-300 rounded-lg bg-white min-w-[180px]"
@@ -1727,12 +1514,6 @@ const BrowseView = ({ objects, filters, onFilterChange, onObjectClick, onAddNew,
               <span className="tag tag-gold">
                 Search: "{searchQuery}"
                 <button onClick={() => setSearchQuery('')} className="ml-1"><IconX size={14} /></button>
-              </span>
-            )}
-            {filters.objectType && (
-              <span className="tag tag-gold">
-                Type: {filters.objectType}
-                <button onClick={() => onFilterChange({ ...filters, objectType: null })} className="ml-1"><IconX size={14} /></button>
               </span>
             )}
             {filters.collection && (
@@ -2069,3 +1850,7 @@ const ArchiveApp = () => {
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<ArchiveApp />);
+
+
+
+
