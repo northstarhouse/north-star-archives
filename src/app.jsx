@@ -1473,8 +1473,7 @@ const BrowseView = ({ objects, filters, onFilterChange, onObjectClick, onAddNew,
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="font-display text-3xl md:text-4xl font-semibold text-stone-800">Archives</h1>
-          <p className="font-display text-xl text-stone-700 mt-1">Archival Collection</p>
+          <h1 className="font-header text-3xl md:text-4xl font-semibold text-stone-800">Archival Collection</h1>
           <div className="flex items-center gap-2 mt-1">
             <p className="text-stone-600">North Star House</p>
             {isConnected ? (
@@ -1799,7 +1798,7 @@ const ArchiveApp = () => {
                 North Star House
               </span>
             </button>
-            <span className="text-stone-500 text-sm hidden sm:block">Archives Collection</span>
+            <span className="text-stone-500 text-sm hidden sm:block">Archival Collection</span>
           </div>
         </div>
       </header>
