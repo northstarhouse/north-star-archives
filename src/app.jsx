@@ -213,7 +213,7 @@ const COLLECTIONS = [
 ];
 
 const ORIGIN_OPTIONS = [
-  'Donor (name)',
+  'Donor',
   'Purchase',
   'Found on premises'
 ];
@@ -674,6 +674,7 @@ const MetadataGrid = ({ object, onFilterClick }) => {
         onClick={() => onFilterClick('maker', object.maker)}
       />
       <MetadataField label="From (Origin/Donor/Source)" value={object.from} />
+      <MetadataField label="Origin Details" value={object.originDetails} />
       <MetadataField label="Catalogued Date" value={object.cataloguedDate} />
       <MetadataField label="Cataloguer" value={object.cataloguer} />
       <MetadataField label="Acquisition Notes" value={object.acquisitionNotes} />
@@ -1094,20 +1095,32 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
       {/* From */}
       <section>
         <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Origin Information</h3>
-        <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">
-            From (Origin, Donor, or Source)
-          </label>
-          <select
-            value={form.from}
-            onChange={(e) => updateField('from', e.target.value)}
-            className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white"
-          >
-            <option value="">Select origin...</option>
-            {ORIGIN_OPTIONS.map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">
+              From (Origin, Donor, or Source)
+            </label>
+            <select
+              value={form.from}
+              onChange={(e) => updateField('from', e.target.value)}
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white"
+            >
+              <option value="">Select origin...</option>
+              {ORIGIN_OPTIONS.map(option => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Name / Store / Where on Premises</label>
+            <input
+              type="text"
+              value={form.originDetails}
+              onChange={(e) => updateField('originDetails', e.target.value)}
+              placeholder="e.g., donor name, store name, or where it was found"
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+            />
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           <div>
@@ -1120,6 +1133,16 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
               className="w-full px-4 py-3 border border-stone-300 rounded-lg"
             />
           </div>
+        </div>
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-stone-700 mb-1">Acquisition Notes</label>
+          <textarea
+            value={form.acquisitionNotes}
+            onChange={(e) => updateField('acquisitionNotes', e.target.value)}
+            placeholder="e.g., Donor requests items be returned if administration changes"
+            className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+            rows={2}
+          />
         </div>
       </section>
 
@@ -1280,16 +1303,6 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
               <option value="Other">Other</option>
             </select>
           </div>
-        </div>
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-stone-700 mb-1">Acquisition Notes</label>
-          <textarea
-            value={form.acquisitionNotes}
-            onChange={(e) => updateField('acquisitionNotes', e.target.value)}
-            placeholder="e.g., Donor requests items be returned if administration changes"
-            className="w-full px-4 py-3 border border-stone-300 rounded-lg"
-            rows={2}
-          />
         </div>
         <div className="mt-4">
           <label className="block text-sm font-medium text-stone-700 mb-1">
