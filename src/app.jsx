@@ -1230,6 +1230,19 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
         <h3 className="font-display text-xl font-semibold text-stone-800 mb-4">Classification</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-stone-700 mb-1">Named Collection</label>
+            <select
+              value={form.collection}
+              onChange={(e) => updateField('collection', e.target.value)}
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white"
+            >
+              <option value="">Select collection...</option>
+              {COLLECTIONS.map(col => (
+                <option key={col} value={col}>{col}</option>
+              ))}
+            </select>
+          </div>
+          <div className="md:col-span-2">
             <label className="block text-sm font-medium text-stone-700 mb-1">Object Number</label>
             <input
               type="text"
