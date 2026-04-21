@@ -218,6 +218,21 @@ const ORIGIN_OPTIONS = [
   'Found on premises'
 ];
 
+const isTimestampLike = (value) => {
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(trimmed)) return true;
+  if (/^\d{1,2}\/\d{1,2}\/\d{2,4},?\s+\d{1,2}:\d{2}/.test(trimmed)) return true;
+  if (/^[A-Za-z]{3}\s+[A-Za-z]{3}\s+\d{1,2}\s+\d{4}\s+\d{2}:\d{2}:\d{2}/.test(trimmed)) return true;
+  return false;
+};
+
+const sanitizeEstimatedValue = (value) => {
+  if (typeof value !== 'string') return value || '';
+  return isTimestampLike(value) ? '' : value;
+};
+
 // ============================================================================
 // FALLBACK SAMPLE DATA (used when Google Sheets is not configured)
 // ============================================================================
@@ -660,7 +675,7 @@ const MetadataGrid = ({ object, onFilterClick }) => {
       />
       <MetadataField label="Measurements" value={object.measurements} />
       <MetadataField label="Physical Characteristics" value={object.physicalCharacteristics} />
-      <MetadataField label="Location in House/On Property" value={object.locationInHouse} />
+      <MetadataField label="Location on Property" value={object.locationInHouse} />
       <MetadataField
         label="Designer"
         value={object.designer}
@@ -680,7 +695,7 @@ const MetadataGrid = ({ object, onFilterClick }) => {
       <MetadataField label="Acquisition Notes" value={object.acquisitionNotes} />
       <MetadataField
         label="Estimated Value"
-        value={object.amountPaidOrEstimatedReplacementValue}
+        value={sanitizeEstimatedValue(object.amountPaidOrEstimatedReplacementValue)}
       />
     </div>
   );
@@ -1040,7 +1055,8 @@ const ImageInput = ({ images, onChange }) => {
 // ============================================================================
 
 const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => {
+    const initialForm = {
     title: '',
     aboutText: '',
     locationInHouse: '',
@@ -1060,6 +1076,11 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
     acquisitionNotes: '',
     amountPaidOrEstimatedReplacementValue: '',
     ...object
+    };
+    return {
+      ...initialForm,
+      amountPaidOrEstimatedReplacementValue: sanitizeEstimatedValue(initialForm.amountPaidOrEstimatedReplacementValue)
+    };
   });
 
   const handleSubmit = (e) => {
@@ -1118,14 +1139,24 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">Location in House/On Property</label>
-            <input
-              type="text"
+            <label className="block text-sm font-medium text-stone-700 mb-1">Location on Property</label>
+            <select
               value={form.locationInHouse}
               onChange={(e) => updateField('locationInHouse', e.target.value)}
-              placeholder="e.g., Dining Room, East wall"
-              className="w-full px-4 py-3 border border-stone-300 rounded-lg"
-            />
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white"
+            >
+              <option value="">— Select a location —</option>
+              <option value="South Bathroom w/ Window">South Bathroom w/ Window</option>
+              <option value="South Bathroom w/o Window">South Bathroom w/o Window</option>
+              <option value="Julia Morgan Room">Julia Morgan Room</option>
+              <option value="A.D. Foote Library">A.D. Foote Library</option>
+              <option value="Living Room">Living Room</option>
+              <option value="Dining Room">Dining Room</option>
+              <option value="Kitchen">Kitchen</option>
+              <option value="Terrace">Terrace</option>
+              <option value="Kitchen Bathroom">Kitchen Bathroom</option>
+              <option value="Courtyard">Courtyard</option>
+            </select>
           </div>
         </div>
       </section>
