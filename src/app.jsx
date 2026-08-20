@@ -1157,6 +1157,7 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
               <option value="Kitchen Bathroom">Kitchen Bathroom</option>
               <option value="Courtyard">Courtyard</option>
               <option value="Mary Hallock Foote Office">Mary Hallock Foote Office</option>
+              <option value="Storage">Storage</option>
             </select>
           </div>
         </div>
