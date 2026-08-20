@@ -675,7 +675,12 @@ const MetadataGrid = ({ object, onFilterClick }) => {
       />
       <MetadataField label="Measurements" value={object.measurements} />
       <MetadataField label="Physical Characteristics" value={object.physicalCharacteristics} />
-      <MetadataField label="Location on Property" value={object.locationInHouse} />
+      <MetadataField
+        label="Location on Property"
+        value={object.locationInHouse === 'Storage' && object.storageDetail
+          ? `Storage (${object.storageDetail})`
+          : object.locationInHouse}
+      />
       <MetadataField
         label="Designer"
         value={object.designer}
@@ -1060,6 +1065,7 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
     title: '',
     aboutText: '',
     locationInHouse: '',
+    storageDetail: '',
     images: [],
     from: '',
     designer: '',
@@ -1159,6 +1165,15 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
               <option value="Mary Hallock Foote Office">Mary Hallock Foote Office</option>
               <option value="Storage">Storage</option>
             </select>
+            {form.locationInHouse === 'Storage' && (
+              <input
+                type="text"
+                value={form.storageDetail}
+                onChange={(e) => updateField('storageDetail', e.target.value)}
+                placeholder="Specify storage location (optional)"
+                className="w-full mt-2 px-4 py-3 border border-stone-300 rounded-lg"
+              />
+            )}
           </div>
         </div>
       </section>
