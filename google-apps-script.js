@@ -25,7 +25,8 @@
  *          controllingInstitution, collectionType, classification,
  *          physicalCharacteristics, cataloguedDate, cataloguer,
  *          relatedAcquisitionRecord, acquisitionNotes, parts,
- *          amountPaidOrEstimatedReplacementValue, createdAt, updatedAt
+ *          amountPaidOrEstimatedReplacementValue, createdAt, updatedAt,
+ *          valuationImages
  */
 
 const USE_SHEETS = true;
@@ -64,7 +65,8 @@ const HEADERS = [
   'parts',
   'amountPaidOrEstimatedReplacementValue',
   'createdAt',
-  'updatedAt'
+  'updatedAt',
+  'valuationImages'
 ];
 
 /**
@@ -235,7 +237,7 @@ function getAllObjects() {
       let value = row[j];
 
       // Parse JSON fields
-      if (header === 'images' || header === 'keywords' || header === 'parts') {
+      if (header === 'images' || header === 'valuationImages' || header === 'keywords' || header === 'parts') {
         try {
           value = value ? JSON.parse(value) : [];
         } catch (e) {
@@ -281,7 +283,7 @@ function createObject(obj) {
     const value = obj[header];
 
     // Stringify arrays
-    if (header === 'images' || header === 'keywords' || header === 'parts') {
+    if (header === 'images' || header === 'valuationImages' || header === 'keywords' || header === 'parts') {
       return JSON.stringify(value || []);
     }
 
@@ -325,7 +327,7 @@ function updateObject(obj) {
     const value = obj[header];
 
     // Stringify arrays
-    if (header === 'images' || header === 'keywords' || header === 'parts') {
+    if (header === 'images' || header === 'valuationImages' || header === 'keywords' || header === 'parts') {
       return JSON.stringify(value || []);
     }
 

@@ -702,6 +702,29 @@ const MetadataGrid = ({ object, onFilterClick }) => {
         label="Estimated Value"
         value={sanitizeEstimatedValue(object.amountPaidOrEstimatedReplacementValue)}
       />
+      {object.valuationImages && object.valuationImages.length > 0 && (
+        <div className="py-3 md:col-span-2">
+          <div className="metadata-label">Comparable Listings</div>
+          <div className="flex flex-wrap gap-3 mt-2">
+            {object.valuationImages.map((img, idx) => (
+              <a
+                key={idx}
+                href={img.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block"
+                title={img.caption || 'Comparable listing screenshot'}
+              >
+                <img
+                  src={img.url}
+                  alt={img.caption || 'Comparable listing screenshot'}
+                  className="w-24 h-24 object-cover rounded-lg border border-stone-200 hover:opacity-80 transition-opacity"
+                />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1067,6 +1090,7 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
     locationInHouse: '',
     storageDetail: '',
     images: [],
+    valuationImages: [],
     from: '',
     designer: '',
     maker: '',
@@ -1226,6 +1250,14 @@ const AdminForm = ({ object, onSave, onCancel, isSaving }) => {
             onChange={(e) => updateField('amountPaidOrEstimatedReplacementValue', e.target.value)}
             placeholder="e.g., $1,200 (estimated)"
             className="w-full px-4 py-3 border border-stone-300 rounded-lg"
+          />
+        </div>
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-stone-700 mb-1">Comparable Listings (optional)</label>
+          <p className="text-sm text-stone-500 mb-2">Add screenshots from eBay, auction sites, or marketplaces showing comparable items, to support this estimate</p>
+          <ImageInput
+            images={form.valuationImages}
+            onChange={(valuationImages) => updateField('valuationImages', valuationImages)}
           />
         </div>
         <div className="mt-4">
